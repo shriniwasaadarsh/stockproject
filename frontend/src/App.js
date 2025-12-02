@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Card, Row, Col, Select, Button, Spin, Alert, Tabs, Statistic, Tag, Table, InputNumber, Divider, Space, Tooltip, Progress } from 'antd';
+import { Layout, Card, Row, Col, Select, Button, Spin, Alert, Tabs, Statistic, Tag, Table, InputNumber, Divider, Space, Tooltip, Progress, Input, message } from 'antd';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Area, AreaChart, BarChart, Bar } from 'recharts';
 import { 
   StockOutlined, RiseOutlined, BarChartOutlined, HeartOutlined, 
   WarningOutlined, DollarOutlined, SignalFilled, SafetyOutlined,
-  SunOutlined, MoonOutlined
+  SunOutlined, MoonOutlined, PlusOutlined, CloseOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import moment from 'moment';
@@ -28,8 +28,44 @@ function App() {
   const [portfolioWeights, setPortfolioWeights] = useState([0.5, 0.5]);
   const [portfolioData, setPortfolioData] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
-
-  const tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'JPM', 'V', 'WMT'];
+  
+  // Make tickers dynamic with state
+  const [tickers, setTickers] = useState(['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'JPM', 'V', 'WMT']);
+  const [newTicker, setNewTicker] = useState('');
+  
+  // Function to add a new ticker
+  const addTicker = () => {
+    const tickerUpper = newTicker.trim().toUpperCase();
+    if (!tickerUpper) {
+      message.warning('Please enter a ticker symbol');
+      return;
+    }
+    if (tickers.includes(tickerUpper)) {
+      message.warning('Ticker already exists');
+      return;
+    }
+    if (!/^[A-Z]{1,5}$/.test(tickerUpper)) {
+      message.warning('Please enter a valid ticker symbol (1-5 letters)');
+      return;
+    }
+    setTickers([...tickers, tickerUpper]);
+    setNewTicker('');
+    message.success(`Added ${tickerUpper} to the list`);
+  };
+  
+  // Function to remove a ticker
+  const removeTicker = (tickerToRemove) => {
+    if (tickers.length <= 1) {
+      message.warning('Must have at least one ticker');
+      return;
+    }
+    setTickers(tickers.filter(t => t !== tickerToRemove));
+    // If the removed ticker was selected, switch to the first remaining ticker
+    if (ticker === tickerToRemove) {
+      setTicker(tickers.filter(t => t !== tickerToRemove)[0]);
+    }
+    message.success(`Removed ${tickerToRemove} from the list`);
+  };
 
   const fetchForecast = async () => {
     setLoading(true);
@@ -312,10 +348,46 @@ function App() {
             <Select
               value={ticker}
               onChange={setTicker}
-              style={{ width: 120 }}
+              style={{ width: 140 }}
+              dropdownRender={menu => (
+                <>
+                  {menu}
+                  <Divider style={{ margin: '8px 0' }} />
+                  <Space style={{ padding: '0 8px 4px' }}>
+                    <Input
+                      placeholder="Add ticker"
+                      value={newTicker}
+                      onChange={e => setNewTicker(e.target.value.toUpperCase())}
+                      onPressEnter={addTicker}
+                      style={{ width: 100 }}
+                      maxLength={5}
+                    />
+                    <Button 
+                      type="text" 
+                      icon={<PlusOutlined />} 
+                      onClick={addTicker}
+                    >
+                      Add
+                    </Button>
+                  </Space>
+                </>
+              )}
             >
               {tickers.map(t => (
-                <Option key={t} value={t}>{t}</Option>
+                <Option key={t} value={t}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{t}</span>
+                    {tickers.length > 1 && (
+                      <CloseOutlined 
+                        style={{ color: '#ff4d4f', fontSize: '12px' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeTicker(t);
+                        }}
+                      />
+                    )}
+                  </div>
+                </Option>
               ))}
             </Select>
             <Select
