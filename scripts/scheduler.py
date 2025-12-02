@@ -34,15 +34,28 @@ logger = logging.getLogger(__name__)
 class StockAnalysisScheduler:
     """Scheduled task manager for stock analysis system"""
     
-    def __init__(self, api_url: str = "http://localhost:8000"):
+    def __init__(self, api_url: str = "http://localhost:8000", tickers: List[str] = None):
         self.api_url = api_url
-        self.tickers = ["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN", "META", "NVDA"]
+        # Allow dynamic ticker list, with default fallback
+        self.tickers = tickers if tickers else ["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN", "META", "NVDA"]
         self.session = requests.Session()
         
         # Create necessary directories
         os.makedirs("logs", exist_ok=True)
         os.makedirs("output", exist_ok=True)
         os.makedirs("data", exist_ok=True)
+        
+        logger.info(f"Scheduler initialized with tickers: {', '.join(self.tickers)}")
+    
+    def update_tickers(self, new_tickers: List[str]):
+        """Update the list of tickers to monitor"""
+        if not new_tickers:
+            logger.warning("Cannot update with empty ticker list")
+            return
+        
+        logger.info(f"Updating ticker list from {self.tickers} to {new_tickers}")
+        self.tickers = new_tickers
+        logger.info(f"Ticker list updated successfully")
     
     def update_forecasts(self):
         """Update forecasts for all tracked tickers"""

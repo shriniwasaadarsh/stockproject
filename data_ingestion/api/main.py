@@ -18,6 +18,11 @@ import json
 from datetime import datetime, timedelta
 import asyncio
 import uvicorn
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Import our modules
 from modeling.prophet_model import load_features, train_prophet
@@ -89,6 +94,9 @@ class EvaluationResponse(BaseModel):
 # Global cache for storing results
 cache = {}
 
+# Dynamic ticker list for background updates
+monitored_tickers = ["AAPL", "GOOGL", "MSFT", "TSLA"]
+
 @app.get("/")
 async def root():
     """Root endpoint with API information"""
@@ -103,6 +111,10 @@ async def root():
             "anomalies": "/anomalies - Risk management and anomaly detection",
             "portfolio": "/portfolio - Portfolio optimization",
             "plots": "/plots - Visualization generation",
+            "tickers": "/tickers - Get monitored tickers",
+            "tickers/add": "/tickers/add - Add ticker to monitoring",
+            "tickers/remove": "/tickers/remove - Remove ticker from monitoring",
+            "tickers/update": "/tickers/update - Update monitored ticker list",
             "health": "/health - Health check"
         }
     }
@@ -494,34 +506,132 @@ async def cache_status():
         "status": "success"
     }
 
+@app.get("/tickers")
+async def get_monitored_tickers():
+    """Get the list of tickers being monitored for background updates"""
+    global monitored_tickers
+    return {
+        "monitored_tickers": monitored_tickers,
+        "count": len(monitored_tickers),
+        "status": "success"
+    }
+
+@app.post("/tickers/add")
+async def add_monitored_ticker(ticker: str):
+    """Add a ticker to the monitored list for background updates"""
+    global monitored_tickers
+    
+    ticker_upper = ticker.upper().strip()
+    
+    if not ticker_upper:
+        raise HTTPException(status_code=400, detail="Ticker symbol cannot be empty")
+    
+    if ticker_upper in monitored_tickers:
+        return {
+            "message": f"{ticker_upper} is already being monitored",
+            "monitored_tickers": monitored_tickers,
+            "status": "info"
+        }
+    
+    monitored_tickers.append(ticker_upper)
+    logger.info(f"Added {ticker_upper} to monitored tickers")
+    
+    return {
+        "message": f"Added {ticker_upper} to monitored list",
+        "monitored_tickers": monitored_tickers,
+        "status": "success"
+    }
+
+@app.delete("/tickers/remove")
+async def remove_monitored_ticker(ticker: str):
+    """Remove a ticker from the monitored list"""
+    global monitored_tickers
+    
+    ticker_upper = ticker.upper().strip()
+    
+    if ticker_upper not in monitored_tickers:
+        raise HTTPException(status_code=404, detail=f"{ticker_upper} is not in the monitored list")
+    
+    if len(monitored_tickers) <= 1:
+        raise HTTPException(status_code=400, detail="Cannot remove the last monitored ticker")
+    
+    monitored_tickers.remove(ticker_upper)
+    logger.info(f"Removed {ticker_upper} from monitored tickers")
+    
+    return {
+        "message": f"Removed {ticker_upper} from monitored list",
+        "monitored_tickers": monitored_tickers,
+        "status": "success"
+    }
+
+@app.put("/tickers/update")
+async def update_monitored_tickers(tickers: List[str]):
+    """Update the entire list of monitored tickers"""
+    global monitored_tickers
+    
+    if not tickers:
+        raise HTTPException(status_code=400, detail="Ticker list cannot be empty")
+    
+    # Validate and clean tickers
+    cleaned_tickers = [t.upper().strip() for t in tickers if t.strip()]
+    
+    if not cleaned_tickers:
+        raise HTTPException(status_code=400, detail="No valid tickers provided")
+    
+    old_tickers = monitored_tickers.copy()
+    monitored_tickers = cleaned_tickers
+    logger.info(f"Updated monitored tickers from {old_tickers} to {monitored_tickers}")
+    
+    return {
+        "message": "Monitored ticker list updated",
+        "old_tickers": old_tickers,
+        "new_tickers": monitored_tickers,
+        "status": "success"
+    }
+
 # Background task for periodic updates
 async def periodic_update():
     """Background task to update forecasts periodically"""
     while True:
         try:
-            # Update forecasts for common tickers
-            common_tickers = ["AAPL", "GOOGL", "MSFT", "TSLA"]
+            # Update forecasts for monitored tickers (dynamically updated list)
+            global monitored_tickers
             
-            for ticker in common_tickers:
+            logger.info(f"Running background update for tickers: {monitored_tickers}")
+            
+            for ticker in monitored_tickers:
                 try:
-                    df = load_features()
+                    # Fetch and cache data for each ticker
+                    from data_ingestion.stock_fetch import fetch_stock_data
+                    from feature_engineering.feature import simulate_sentiment_data, add_rolling_features
+                    
+                    stock_df = fetch_stock_data(ticker=ticker)
+                    stock_df = simulate_sentiment_data(stock_df, ticker=ticker)
+                    stock_df = add_rolling_features(stock_df)
+                    df = stock_df.rename(columns={'Datetime': 'ds', 'Close': 'y'})
+                    df['y'] = pd.to_numeric(df['y'], errors='coerce')
+                    df['ds'] = pd.to_datetime(df['ds']).dt.tz_localize(None)
+                    df = df.dropna()
+                    
                     forecast = train_prophet(df)
                     
                     # Cache the forecast
-                    cache_key = f"forecast_{ticker}_30"
+                    cache_key = f"forecast_{ticker}_30_prophet"
                     cache[cache_key] = {
                         "forecast": forecast,
                         "timestamp": datetime.now()
                     }
                     
+                    logger.info(f"Background update completed for {ticker}")
+                    
                 except Exception as e:
-                    print(f"Background update failed for {ticker}: {e}")
+                    logger.error(f"Background update failed for {ticker}: {e}")
             
             # Wait 1 hour before next update
             await asyncio.sleep(3600)
             
         except Exception as e:
-            print(f"Background task error: {e}")
+            logger.error(f"Background task error: {e}")
             await asyncio.sleep(300)  # Wait 5 minutes on error
 
 @app.on_event("startup")
