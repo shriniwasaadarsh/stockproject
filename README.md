@@ -1,376 +1,255 @@
-# 📈 Stock Analysis System
+# 📈 AI-Powered Stock Analysis & Prediction System
 
-A comprehensive stock analysis and prediction system with real-time sentiment analysis, machine learning models, and REST API.
-
-## 🌟 Features
-
-### 🔄 Real Sentiment Integration
-- **VADER & TextBlob** sentiment analysis
-- **News headline** processing
-- **Real-time sentiment** scoring
-- **API integration** (NewsAPI, Alpha Vantage)
-
-### 📊 Advanced Evaluation
-- **RMSE, MAPE, MAE** metrics
-- **Directional accuracy** analysis
-- **Baseline comparisons** (Naive, Moving Average, Linear Trend)
-- **Confidence interval** coverage
-- **Volatility prediction** accuracy
-
-### 🌐 REST API
-- **FastAPI**-based endpoints
-- **Real-time forecasts**
-- **Interactive plots**
-- **Model evaluation**
-- **Caching system**
-- **Background tasks**
-
-### 🚀 Production Ready
-- **Docker** containerization
-- **Scheduled tasks**
-- **Health monitoring**
-- **Scalable architecture**
-- **Cloud deployment** ready
-
-## 🏗️ Architecture
-
-```
-stock_project2/
-├── data_ingestion/          # Data collection modules
-│   ├── stock_fetch.py      # Stock data from yfinance
-│   ├── sentiment.py        # Basic sentiment analysis
-│   └── news_sentiment.py   # Real news sentiment (VADER/TextBlob)
-├── feature_engineering/     # Feature creation
-│   └── feature.py          # Sentiment + rolling features
-├── modeling/               # ML models
-│   └── prophet_model.py    # Prophet forecasting
-├── evaluation/             # Model evaluation
-│   ├── metrics.py          # Evaluation metrics
-│   └── evaluate_models.py  # Comprehensive evaluation
-├── visualization/          # Plotting and charts
-│   └── plot_forecast.py    # Enhanced visualizations
-├── api/                    # REST API
-│   ├── main.py            # FastAPI application
-│   └── client_example.py  # API client example
-├── scripts/               # Automation
-│   └── scheduler.py       # Scheduled tasks
-└── output/               # Generated files
-```
-
-## 🚀 Quick Start
-
-### Option 1: Automated Setup (Recommended)
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd stock_project2
-
-# Run automated setup
-python setup.py
-
-# Start API server
-python api/main.py
-
-# Start frontend (in another terminal)
-cd frontend && npm start
-```
-
-### Option 2: Docker (Production)
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd stock_project2
-
-# Start all services
-docker-compose up -d
-
-# Check API
-curl http://localhost:8000/health
-```
-
-### Option 3: Manual Installation
-
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Install frontend dependencies
-cd frontend && npm install
-
-# Run API server
-python api/main.py
-
-# Run frontend (in another terminal)
-cd frontend && npm start
-
-# Run evaluation
-python evaluation/evaluate_models.py
-
-# Run scheduler
-python scripts/scheduler.py
-```
-
-### Option 4: Test Everything
-
-```bash
-# Run comprehensive tests
-python test_system.py
-```
-
-## 📡 API Endpoints
-
-### Core Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | API information |
-| `/health` | GET | Health check |
-| `/forecast` | POST | Get stock forecast (Prophet/XGBoost) |
-| `/evaluate` | POST | Evaluate models |
-| `/sentiment` | POST | Sentiment analysis |
-| `/plots/{type}` | GET | Generate plots |
-| `/metrics/{ticker}` | GET | Get cached metrics |
-
-### Example API Usage
-
-```python
-import requests
-
-# Get forecast with Prophet
-response = requests.post("http://localhost:8000/forecast", json={
-    "ticker": "AAPL",
-    "days": 30,
-    "use_real_sentiment": True,
-    "model_type": "prophet"
-})
-forecast = response.json()
-
-# Get forecast with XGBoost
-response = requests.post("http://localhost:8000/forecast", json={
-    "ticker": "AAPL",
-    "days": 30,
-    "use_real_sentiment": True,
-    "model_type": "xgboost"
-})
-forecast = response.json()
-
-# Get sentiment analysis
-response = requests.post("http://localhost:8000/sentiment", json={
-    "ticker": "AAPL",
-    "days_back": 7
-})
-sentiment = response.json()
-```
-
-## 🖥️ Frontend Dashboard
-
-### React Dashboard Features
-- **Real-time stock forecasts** with Prophet and XGBoost models
-- **Interactive charts** using Recharts
-- **Sentiment analysis** visualization
-- **Model comparison** and evaluation metrics
-- **Responsive design** for mobile and desktop
-- **Live data updates** from the API
-
-### Dashboard Pages
-- **Forecast Tab** - Price predictions with confidence intervals
-- **Sentiment Tab** - Sentiment analysis over time
-- **Evaluation Tab** - Model performance comparison
-
-### Access Dashboard
-```bash
-# Start frontend
-cd frontend && npm start
-
-# Open browser to
-http://localhost:3000
-```
-
-## 📊 Visualization Features
-
-### Enhanced Plots
-- **Sentiment overlays** on price charts
-- **Volatility analysis** vs confidence intervals
-- **Interactive dashboards** with Plotly
-- **High-resolution exports** (PNG, HTML)
-
-### Plot Types
-- `forecast_with_sentiment` - Price + sentiment analysis
-- `volatility_analysis` - Volatility vs confidence
-- `interactive` - Interactive Plotly dashboard
-
-## 🔧 Configuration
-
-### Environment Variables
-
-```bash
-# API Keys (optional)
-NEWS_API_KEY=your_news_api_key
-ALPHA_VANTAGE_KEY=your_alpha_vantage_key
-
-# Server Settings
-HOST=0.0.0.0
-PORT=8000
-WORKERS=4
-```
-
-### Scheduler Configuration
-
-The scheduler runs automatically and handles:
-- **Hourly forecast updates** during market hours
-- **Sentiment analysis** every 2 hours
-- **Model evaluation** daily at 6 PM
-- **Health checks** every 15 minutes
-- **Data cleanup** weekly
-
-## 📈 Model Performance
-
-### Evaluation Metrics
-- **RMSE** - Root Mean Square Error
-- **MAPE** - Mean Absolute Percentage Error
-- **Directional Accuracy** - Correct direction predictions
-- **Volatility Accuracy** - Volatility prediction quality
-- **Confidence Coverage** - Actual values within intervals
-
-### Baseline Comparisons
-- **Naive Baseline** - Last value repeated
-- **Moving Average** - 3, 5, 10 period averages
-- **Linear Trend** - Linear regression trend
-
-## 🐳 Docker Deployment
-
-### Services Available
-
-```bash
-# Main API service
-docker-compose up stock-api
-
-# Development with hot reload
-docker-compose --profile dev up
-
-# With caching and database
-docker-compose --profile cache --profile database up
-
-# With scheduler
-docker-compose --profile scheduler up
-```
-
-### Multi-stage Build
-- **base** - Core dependencies
-- **development** - Dev tools + hot reload
-- **production** - Optimized for production
-- **api** - API-only minimal image
-
-## ☁️ Cloud Deployment
-
-### AWS ECS
-```bash
-# Build and push to ECR
-docker build -t stock-analysis-api .
-docker tag stock-analysis-api:latest <account>.dkr.ecr.<region>.amazonaws.com/stock-analysis:latest
-docker push <account>.dkr.ecr.<region>.amazonaws.com/stock-analysis:latest
-```
-
-### Google Cloud Run
-```bash
-# Deploy to Cloud Run
-gcloud run deploy stock-analysis \
-  --image gcr.io/<project-id>/stock-analysis \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated
-```
-
-## 📊 Example Usage
-
-### Python Client
-
-```python
-from api.client_example import StockAnalysisClient
-
-client = StockAnalysisClient("http://localhost:8000")
-
-# Get forecast
-forecast = client.get_forecast(ticker="AAPL", days=30)
-print(f"Forecast for {forecast['ticker']}: {len(forecast['predictions'])} days")
-
-# Evaluate models
-evaluation = client.evaluate_models(ticker="AAPL")
-print(f"Best model: {evaluation['best_model']}")
-
-# Get sentiment
-sentiment = client.get_sentiment(ticker="AAPL")
-print(f"Average sentiment: {sentiment['average_sentiment']:.4f}")
-```
-
-### Command Line
-
-```bash
-# Run forecast
-stock-forecast
-
-# Run evaluation
-stock-evaluate
-
-# Run API server
-stock-api
-
-# Run demo
-stock-demo
-```
-
-## 🧪 Testing
-
-```bash
-# Run tests
-pytest
-
-# Run with coverage
-pytest --cov=.
-
-# Run specific module
-pytest evaluation/tests/
-
-# Run API tests
-pytest api/tests/
-```
-
-## 📚 Documentation
-
-- [API Documentation](http://localhost:8000/docs) - Interactive API docs
-- [Deployment Guide](DEPLOYMENT.md) - Detailed deployment instructions
-- [Visualization Guide](VISUALIZATION_README.md) - Plotting features
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **Facebook Prophet** for time series forecasting
-- **VADER** for sentiment analysis
-- **FastAPI** for the web framework
-- **yfinance** for stock data
-- **Plotly** for interactive visualizations
-
-## 📞 Support
-
-For support and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Review the API docs at `/docs`
+A comprehensive real-time stock analysis platform combining machine learning predictions, sentiment analysis, and portfolio optimization in an interactive dashboard.
 
 ---
 
-**Built with ❤️ for the financial analysis community**
+## 🚀 Features
 
+### Core Analysis
+- **Price Forecasting**: Prophet & XGBoost models for accurate price predictions
+- **Trading Signals**: AI-generated BUY/SELL/HOLD recommendations with confidence scores
+- **Sentiment Analysis**: News sentiment analysis using VADER & TextBlob
+- **Risk Management**: Anomaly detection and risk level assessment
+
+### Advanced Features
+- **Model Benchmarking**: Compare Prophet, XGBoost, Naive, and Moving Average models
+- **Backtesting**: Simulate trading strategies on historical data
+- **Stock Comparison**: Compare multiple stocks with visualizations
+- **Paper Trading**: Practice trading with virtual money
+- **Portfolio Optimization**: Sharpe ratio, volatility analysis, and optimal weights
+- **Market Insights**: Trend, momentum, and volume analysis
+- **Real-time Alerts**: Price and sentiment-based alerts
+
+### Dashboard
+- **Dark/Light Mode**: Toggle between themes
+- **Dynamic Ticker Management**: Add/remove stocks from UI
+- **Interactive Charts**: Recharts-powered visualizations
+- **Final Recommendation Panel**: Composite score combining all factors
+
+---
+
+## 📁 Project Structure
+
+```
+stockproject/
+├── data_ingestion/
+│   ├── api/
+│   │   └── main.py              # FastAPI backend (all endpoints)
+│   ├── stock_fetch.py           # Yahoo Finance data fetching
+│   ├── news_sentiment.py        # News sentiment analysis
+│   └── sentiment.py             # VADER/TextBlob sentiment
+├── modeling/
+│   ├── prophet_model.py         # Prophet forecasting model
+│   ├── xgboost_model.py         # XGBoost prediction model
+│   ├── signals.py               # Trading signal generation
+│   └── advanced_analytics.py    # Advanced analysis functions
+├── feature_engineering/
+│   └── feature.py               # Feature engineering & rolling stats
+├── evaluation/
+│   ├── evaluate_models.py       # Model evaluation framework
+│   └── metrics.py               # Accuracy metrics (MAE, RMSE, etc.)
+├── visualization/
+│   └── plot_forecast.py         # Matplotlib visualizations
+├── scripts/
+│   └── scheduler.py             # Background task scheduler
+├── frontend/
+│   ├── src/
+│   │   ├── App.js               # Main React dashboard
+│   │   ├── index.js             # Entry point
+│   │   └── index.css            # Styles
+│   ├── public/
+│   │   └── index.html           # HTML template
+│   └── package.json             # NPM dependencies
+├── start_system.py              # System startup script
+├── requirements.txt             # Python dependencies
+└── README.md                    # This file
+```
+
+---
+
+## 🛠️ Installation
+
+### Prerequisites
+- Python 3.8+
+- Node.js 16+
+- npm or yarn
+
+### Backend Setup
+
+```bash
+# Clone/navigate to project
+cd stockproject
+
+# Create virtual environment (optional)
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# For macOS users (XGBoost requires OpenMP)
+brew install libomp
+```
+
+### Frontend Setup
+
+```bash
+cd frontend
+npm install
+```
+
+---
+
+## 🚀 Running the Application
+
+### Option 1: Start System Script (Recommended)
+
+```bash
+python3 start_system.py
+```
+
+This automatically starts both backend and frontend.
+
+### Option 2: Manual Start
+
+**Terminal 1 - Backend:**
+```bash
+cd stockproject
+python3 -m uvicorn data_ingestion.api.main:app --host 0.0.0.0 --port 8000
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd stockproject/frontend
+npm start
+```
+
+### Access the Application
+- **Dashboard**: http://localhost:3000
+- **API Docs**: http://localhost:8000/docs
+
+---
+
+## 📊 API Endpoints
+
+### Forecasting
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/forecast` | POST | Get price predictions |
+| `/signals` | POST | Get trading signals |
+| `/signals-enhanced` | POST | Enhanced signals with explanations |
+
+### Analysis
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/sentiment` | POST | Sentiment analysis |
+| `/anomalies` | POST | Anomaly detection |
+| `/evaluate` | POST | Model evaluation |
+| `/news` | POST | News summary |
+
+### Portfolio
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/portfolio` | POST | Portfolio optimization |
+| `/backtest` | POST | Backtest trading strategy |
+| `/compare` | POST | Compare multiple stocks |
+
+### Trading
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/final-recommendation` | POST | Comprehensive recommendation |
+| `/paper-trade/execute` | POST | Execute paper trade |
+| `/paper-trade/account` | GET | Get paper trading account |
+| `/trade-recommendation` | POST | Get trade recommendation |
+
+### Management
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/tickers` | GET | Get monitored tickers |
+| `/tickers/add` | POST | Add ticker to monitor |
+| `/tickers/remove` | DELETE | Remove ticker |
+| `/alerts` | GET | Get active alerts |
+| `/market-insights` | POST | Get market insights |
+
+---
+
+## 🔧 How It Works
+
+### 1. Data Pipeline
+```
+Yahoo Finance → Stock Data → Feature Engineering → Model Training → Predictions
+                    ↓
+             News APIs → Sentiment Analysis → Combined Score
+```
+
+### 2. Signal Generation
+Signals are generated based on:
+- **Predicted Price Change**: >2% → STRONG_BUY, >1% → BUY, <-1% → SELL, <-2% → STRONG_SELL
+- **Sentiment Score**: Positive/negative news impact
+- **Model Confidence**: Prediction reliability score
+- **Risk Level**: Anomaly-based risk assessment
+
+### 3. Final Recommendation
+Composite score combining:
+- Forecast Model (40%)
+- News Sentiment (20%)
+- Trading Signals (25%)
+- Risk Level (15%)
+
+### 4. Model Comparison
+- **Prophet**: Best for real-time predictions, handles seasonality
+- **XGBoost**: Good for pattern recognition
+- **Naive/MA**: Baseline models (flatline predictions)
+
+---
+
+## 📱 Dashboard Tabs
+
+| Tab | Description |
+|-----|-------------|
+| **Price Forecast** | Historical prices + predictions chart |
+| **Trading Signals** | AI signals with explanations |
+| **Risk Management** | Anomaly detection & risk scoring |
+| **Sentiment** | News sentiment analysis |
+| **Portfolio** | Multi-stock portfolio optimization |
+| **Model Benchmark** | Compare model performance |
+| **Alerts** | Price & sentiment alerts |
+| **Backtest** | Strategy backtesting results |
+| **Compare** | Multi-stock comparison charts |
+| **Insights** | Market trend analysis |
+| **Paper Trade** | Simulated trading |
+| **Final Call** | Comprehensive recommendation |
+
+---
+
+## 🎯 Key Technologies
+
+| Category | Technologies |
+|----------|-------------|
+| **Backend** | FastAPI, Python, Pandas, NumPy |
+| **ML Models** | Prophet, XGBoost, scikit-learn |
+| **Sentiment** | VADER, TextBlob |
+| **Data Source** | yfinance (Yahoo Finance) |
+| **Frontend** | React, Ant Design, Recharts |
+| **Visualization** | Matplotlib, Recharts |
+
+---
+
+## ⚠️ Disclaimer
+
+This is an educational project. Stock predictions are inherently uncertain. Do not use this system for actual trading decisions without proper financial advice. Past performance does not guarantee future results.
+
+---
+
+## 📄 License
+
+MIT License - Feel free to use and modify for educational purposes.
+
+---
+
+## 🙏 Acknowledgments
+
+- Yahoo Finance for stock data
+- Facebook/Meta for Prophet library
+- Ant Design for UI components
