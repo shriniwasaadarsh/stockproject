@@ -44,7 +44,7 @@ function App() {
       message.warning('Ticker already exists');
       return;
     }
-    if (!/^[A-Z]{1,5}$/.test(tickerUpper)) {
+    if (!/^[A-Z]{1,10}$/.test(tickerUpper)) {
       message.warning('Please enter a valid ticker symbol (1-5 letters)');
       return;
     }
@@ -360,7 +360,7 @@ function App() {
                       onChange={e => setNewTicker(e.target.value.toUpperCase())}
                       onPressEnter={addTicker}
                       style={{ width: 100 }}
-                      maxLength={5}
+                      maxLength={10}
                     />
                     <Button 
                       type="text" 
