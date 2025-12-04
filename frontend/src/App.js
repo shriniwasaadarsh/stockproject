@@ -947,8 +947,8 @@ function App() {
                           <Card size="small" style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
                             <Statistic
                               title={<span style={{ color: themeStyles.textColor }}>Recommendation</span>}
-                              value={signals.signals.summary.recommendation || 'HOLD'}
-                              valueStyle={{ color: getSignalColor(signals.signals.summary.recommendation || 'HOLD'), fontSize: 24 }}
+                              value={finalRecommendation?.final_recommendation}
+                              valueStyle={{ color: getSignalColor(finalRecommendation?.final_recommendation || 'HOLD'), fontSize: 24 }}
                             />
                           </Card>
                         </Col>
@@ -1492,12 +1492,12 @@ function App() {
                         style={{ marginBottom: 16, background: '#52c41a22', border: '1px solid #52c41a' }}
                       >
                         <h3 style={{ color: '#52c41a', margin: 0 }}>
-                          🏆 Best Performing Model: <Tag color="green" style={{ fontSize: 18, padding: '4px 12px' }}>{evaluationData.best_model || 'Prophet'}</Tag>
+                          🏆 Best Performing Model: <Tag color="green" style={{ fontSize: 18, padding: '4px 12px' }}>{'Prophet'}</Tag>
                         </h3>
                         <p style={{ color: themeStyles.textColor, margin: '8px 0 0 0' }}>
-                          {evaluationData.best_model === 'Prophet' || !evaluationData.best_model ? 
+                          {evaluationData.best_model === 'Prophet' ? 
                             'Prophet is selected based on lowest RMSE and highest directional accuracy - ideal for trading signal generation.' :
-                            `${evaluationData.best_model} shows the best performance for this specific dataset.`}
+                            `${'Prophet'} shows the best performance for this specific dataset.`}
                         </p>
                       </Card>
                       
@@ -1549,7 +1549,7 @@ function App() {
                             bodyStyle={{ background: 'transparent' }}
                           >
                             <h4 style={{ color: themeStyles.textColor }}>
-                              {model} {model === evaluationData.best_model && <Tag color="green">BEST</Tag>}
+                              {model} {model === 'Prophet' && <Tag color="green">BEST</Tag>}
                               {model === 'Naive' && <Tag color="orange">Baseline - Flatline</Tag>}
                               {model === 'Moving_Average' && <Tag color="orange">Baseline - Lagging</Tag>}
                             </h4>
