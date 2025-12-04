@@ -575,14 +575,16 @@ function App() {
           />
         )}
 
-        {/* Investment Recommendation Card - Prominent Display */}
-        {forecastData && signals?.signals?.summary && (
+        {/* Investment Recommendation Card - Uses Final Recommendation for consistency */}
+        {forecastData && (finalRecommendation || signals?.signals?.summary) && (
           <Card 
             style={{ 
               marginBottom: 24, 
-              background: (signals.signals.summary.recommendation || '').includes('BUY') ? 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)' :
-                          (signals.signals.summary.recommendation || '').includes('SELL') ? 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%)' :
-                          'linear-gradient(135deg, #faad14 0%, #ffc53d 100%)',
+              background: ((finalRecommendation?.final_recommendation || signals?.signals?.summary?.recommendation || '').includes('STRONG_BUY')) ? 'linear-gradient(135deg, #237804 0%, #52c41a 100%)' :
+                          ((finalRecommendation?.final_recommendation || signals?.signals?.summary?.recommendation || '').includes('BUY')) ? 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)' :
+                          ((finalRecommendation?.final_recommendation || signals?.signals?.summary?.recommendation || '').includes('STRONG_SELL')) ? 'linear-gradient(135deg, #a8071a 0%, #ff4d4f 100%)' :
+                          ((finalRecommendation?.final_recommendation || signals?.signals?.summary?.recommendation || '').includes('SELL')) ? 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%)' :
+                          'linear-gradient(135deg, #d48806 0%, #faad14 100%)',
               color: 'white',
               border: 'none',
               boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
@@ -591,26 +593,34 @@ function App() {
             <Row gutter={[24, 24]} align="middle">
               <Col span={16}>
                 <h2 style={{ color: 'white', margin: 0, fontSize: 28, fontWeight: 'bold' }}>
-                  💰 Investment Recommendation for {ticker}
+                  {((finalRecommendation?.final_recommendation || '').includes('STRONG_BUY')) ? '🚀' : 
+                   ((finalRecommendation?.final_recommendation || '').includes('BUY')) ? '📈' :
+                   ((finalRecommendation?.final_recommendation || '').includes('STRONG_SELL')) ? '📉' :
+                   ((finalRecommendation?.final_recommendation || '').includes('SELL')) ? '⬇️' : '⏸️'} Investment Recommendation for {ticker}
                 </h2>
                 <div style={{ marginTop: 16, fontSize: 18 }}>
-                  <strong style={{ fontSize: 32, color: 'white', display: 'block', marginBottom: 12 }}>
-                    {signals.signals.summary.recommendation || 'HOLD'}
+                  <strong style={{ fontSize: 36, color: 'white', display: 'block', marginBottom: 12 }}>
+                    {finalRecommendation?.final_recommendation || signals?.signals?.summary?.recommendation || 'ANALYZING...'}
                   </strong>
+                  {finalRecommendation?.confidence && (
+                    <Tag style={{ background: 'rgba(255,255,255,0.3)', color: 'white', border: 'none', fontSize: 14, padding: '4px 12px', marginBottom: 12 }}>
+                      Confidence: {finalRecommendation.confidence}
+                    </Tag>
+                  )}
                   {forecastData.predictions && forecastData.predictions.length > 0 && (
                     <div style={{ marginTop: 12, background: 'rgba(255,255,255,0.2)', padding: '16px', borderRadius: '8px' }}>
                       <p style={{ color: 'white', margin: '8px 0', fontSize: 16 }}>
-                        <strong>Current Prediction:</strong> ${(forecastData.predictions[0]?.predicted_price || 0).toFixed(2)}
+                        <strong>Current Price:</strong> ${finalRecommendation?.current_price?.toFixed(2) || (forecastData.predictions[0]?.predicted_price || 0).toFixed(2)}
                       </p>
                       <p style={{ color: 'white', margin: '8px 0', fontSize: 16 }}>
-                        <strong>30-Day Forecast:</strong> ${(forecastData.predictions[forecastData.predictions.length - 1]?.predicted_price || 0).toFixed(2)}
+                        <strong>Predicted Price:</strong> ${finalRecommendation?.components?.forecast?.predicted_price?.toFixed(2) || (forecastData.predictions[forecastData.predictions.length - 1]?.predicted_price || 0).toFixed(2)}
                       </p>
                       <p style={{ color: 'white', margin: '8px 0', fontSize: 16 }}>
-                        <strong>Expected Change:</strong> {
+                        <strong>Expected Change:</strong> {finalRecommendation?.components?.forecast?.predicted_change?.toFixed(2) || (
                           forecastData.predictions[0]?.predicted_price > 0 ? 
                           (((forecastData.predictions[forecastData.predictions.length - 1]?.predicted_price || 0) - (forecastData.predictions[0]?.predicted_price || 0)) / (forecastData.predictions[0]?.predicted_price || 1) * 100).toFixed(2) : 
                           '0.00'
-                        }%
+                        )}%
                       </p>
                     </div>
                   )}
@@ -618,16 +628,16 @@ function App() {
               </Col>
               <Col span={8} style={{ textAlign: 'right' }}>
                 <Statistic
-                  title={<span style={{ color: 'white', fontSize: 16 }}>Signal Strength</span>}
-                  value={signals.signals.summary.average_strength || 0}
+                  title={<span style={{ color: 'white', fontSize: 16 }}>Composite Score</span>}
+                  value={finalRecommendation?.composite_score ? (finalRecommendation.composite_score * 100).toFixed(1) : (signals?.signals?.summary?.average_strength || 0)}
                   precision={1}
-                  suffix="%"
+                  suffix={finalRecommendation?.composite_score ? '' : '%'}
                   valueStyle={{ color: 'white', fontSize: 48, fontWeight: 'bold' }}
                 />
                 <div style={{ marginTop: 16, color: 'white', background: 'rgba(255,255,255,0.2)', padding: '12px', borderRadius: '8px' }}>
-                  <p style={{ margin: '4px 0', fontSize: 14 }}>Buy Signals: {signals.signals.summary.buy_signals || 0}</p>
-                  <p style={{ margin: '4px 0', fontSize: 14 }}>Sell Signals: {signals.signals.summary.sell_signals || 0}</p>
-                  <p style={{ margin: '4px 0', fontSize: 14 }}>Hold Signals: {signals.signals.summary.hold_signals || 0}</p>
+                  <p style={{ margin: '4px 0', fontSize: 14 }}>📰 Sentiment: {finalRecommendation?.components?.news_sentiment?.impact || 'N/A'}</p>
+                  <p style={{ margin: '4px 0', fontSize: 14 }}>📊 Trend: {finalRecommendation?.components?.trend?.direction || 'N/A'}</p>
+                  <p style={{ margin: '4px 0', fontSize: 14 }}>⚠️ Risk: {finalRecommendation?.components?.risk?.level || 'N/A'}</p>
                 </div>
               </Col>
             </Row>
@@ -765,6 +775,163 @@ function App() {
 
           <TabPane tab={<span><SignalFilled />Trading Signals</span>} key="signals">
             <Row gutter={[24, 24]}>
+              {/* Signal Generation Explanation */}
+              <Col span={24}>
+                <Card 
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 16 }}>📚 How Trading Signals Are Generated</span>}
+                  size="small"
+                  style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor, marginBottom: 16 }}
+                  headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                  bodyStyle={{ background: themeStyles.cardBackground }}
+                >
+                  <Row gutter={[16, 16]}>
+                    <Col span={4}>
+                      <Card size="small" style={{ background: '#237804', border: 'none', textAlign: 'center' }}>
+                        <strong style={{ color: 'white', fontSize: 12 }}>STRONG_BUY</strong>
+                        <p style={{ color: 'white', fontSize: 10, margin: '4px 0 0 0' }}>Price ↑ &gt;2% + High confidence + Positive sentiment</p>
+                      </Card>
+                    </Col>
+                    <Col span={4}>
+                      <Card size="small" style={{ background: '#52c41a', border: 'none', textAlign: 'center' }}>
+                        <strong style={{ color: 'white', fontSize: 12 }}>BUY</strong>
+                        <p style={{ color: 'white', fontSize: 10, margin: '4px 0 0 0' }}>Price ↑ 1-2% + Good confidence</p>
+                      </Card>
+                    </Col>
+                    <Col span={4}>
+                      <Card size="small" style={{ background: '#faad14', border: 'none', textAlign: 'center' }}>
+                        <strong style={{ color: 'white', fontSize: 12 }}>HOLD</strong>
+                        <p style={{ color: 'white', fontSize: 10, margin: '4px 0 0 0' }}>Price change &lt;1% or mixed signals</p>
+                      </Card>
+                    </Col>
+                    <Col span={4}>
+                      <Card size="small" style={{ background: '#ff4d4f', border: 'none', textAlign: 'center' }}>
+                        <strong style={{ color: 'white', fontSize: 12 }}>SELL</strong>
+                        <p style={{ color: 'white', fontSize: 10, margin: '4px 0 0 0' }}>Price ↓ 1-2% + Good confidence</p>
+                      </Card>
+                    </Col>
+                    <Col span={4}>
+                      <Card size="small" style={{ background: '#a8071a', border: 'none', textAlign: 'center' }}>
+                        <strong style={{ color: 'white', fontSize: 12 }}>STRONG_SELL</strong>
+                        <p style={{ color: 'white', fontSize: 10, margin: '4px 0 0 0' }}>Price ↓ &gt;2% + High confidence + Negative sentiment</p>
+                      </Card>
+                    </Col>
+                    <Col span={4}>
+                      <Card size="small" style={{ background: themeStyles.inputBg, border: `1px solid ${themeStyles.borderColor}`, textAlign: 'center' }}>
+                        <strong style={{ color: themeStyles.textColor, fontSize: 12 }}>Strength %</strong>
+                        <p style={{ color: themeStyles.textColor, fontSize: 10, margin: '4px 0 0 0' }}>Combines prediction confidence + sentiment</p>
+                      </Card>
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+
+              {/* Sentiment Score Segregation */}
+              <Col span={24}>
+                <Card 
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 16 }}>🎯 Current Signal Analysis - Why {enhancedSignals?.summary?.recommendation || signals?.signals?.summary?.recommendation || 'HOLD'}?</span>}
+                  style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                  headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                  bodyStyle={{ background: themeStyles.cardBackground }}
+                >
+                  <Row gutter={[16, 16]}>
+                    {/* Sentiment Score Card */}
+                    <Col span={6}>
+                      <Card 
+                        size="small" 
+                        title={<span style={{ color: themeStyles.textColor }}>📰 Sentiment Score</span>}
+                        style={{ background: sentimentData?.average_sentiment > 0.1 ? '#52c41a22' : sentimentData?.average_sentiment < -0.1 ? '#ff4d4f22' : '#faad1422', borderColor: sentimentData?.average_sentiment > 0.1 ? '#52c41a' : sentimentData?.average_sentiment < -0.1 ? '#ff4d4f' : '#faad14' }}
+                      >
+                        <Statistic 
+                          value={sentimentData?.average_sentiment?.toFixed(3) || 0}
+                          valueStyle={{ color: sentimentData?.average_sentiment > 0.1 ? '#52c41a' : sentimentData?.average_sentiment < -0.1 ? '#ff4d4f' : '#faad14', fontSize: 28 }}
+                        />
+                        <p style={{ color: themeStyles.textColor, fontSize: 12, margin: '8px 0 0 0' }}>
+                          {sentimentData?.average_sentiment > 0.3 ? '🟢 Strong Positive - Supports BUY' :
+                           sentimentData?.average_sentiment > 0.1 ? '🟢 Positive - Supports BUY' :
+                           sentimentData?.average_sentiment < -0.3 ? '🔴 Strong Negative - Supports SELL' :
+                           sentimentData?.average_sentiment < -0.1 ? '🔴 Negative - Supports SELL' :
+                           '🟡 Neutral - Supports HOLD'}
+                        </p>
+                      </Card>
+                    </Col>
+                    {/* Prediction Change Card */}
+                    <Col span={6}>
+                      <Card 
+                        size="small" 
+                        title={<span style={{ color: themeStyles.textColor }}>📈 Predicted Change</span>}
+                        style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                      >
+                        <Statistic 
+                          value={finalRecommendation?.components?.forecast?.predicted_change?.toFixed(2) || 0}
+                          suffix="%"
+                          valueStyle={{ color: (finalRecommendation?.components?.forecast?.predicted_change || 0) > 1 ? '#52c41a' : (finalRecommendation?.components?.forecast?.predicted_change || 0) < -1 ? '#ff4d4f' : '#faad14', fontSize: 28 }}
+                        />
+                        <p style={{ color: themeStyles.textColor, fontSize: 12, margin: '8px 0 0 0' }}>
+                          {(finalRecommendation?.components?.forecast?.predicted_change || 0) > 2 ? '🚀 Strong upward → STRONG_BUY' :
+                           (finalRecommendation?.components?.forecast?.predicted_change || 0) > 1 ? '📈 Upward trend → BUY' :
+                           (finalRecommendation?.components?.forecast?.predicted_change || 0) < -2 ? '📉 Strong downward → STRONG_SELL' :
+                           (finalRecommendation?.components?.forecast?.predicted_change || 0) < -1 ? '⬇️ Downward trend → SELL' :
+                           '➡️ Minimal movement → HOLD'}
+                        </p>
+                      </Card>
+                    </Col>
+                    {/* Model Confidence Card */}
+                    <Col span={6}>
+                      <Card 
+                        size="small" 
+                        title={<span style={{ color: themeStyles.textColor }}>🎯 Model Confidence</span>}
+                        style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                      >
+                        <Statistic 
+                          value={signals?.signals?.summary?.average_strength?.toFixed(1) || 50}
+                          suffix="%"
+                          valueStyle={{ color: (signals?.signals?.summary?.average_strength || 50) > 70 ? '#52c41a' : (signals?.signals?.summary?.average_strength || 50) > 50 ? '#faad14' : '#ff4d4f', fontSize: 28 }}
+                        />
+                        <p style={{ color: themeStyles.textColor, fontSize: 12, margin: '8px 0 0 0' }}>
+                          {(signals?.signals?.summary?.average_strength || 50) > 70 ? '✅ High confidence - Trust signal' :
+                           (signals?.signals?.summary?.average_strength || 50) > 50 ? '⚡ Moderate - Proceed with caution' :
+                           '⚠️ Low confidence - Wait for better signal'}
+                        </p>
+                      </Card>
+                    </Col>
+                    {/* Risk Level Card */}
+                    <Col span={6}>
+                      <Card 
+                        size="small" 
+                        title={<span style={{ color: themeStyles.textColor }}>⚠️ Risk Level</span>}
+                        style={{ background: anomalies?.risk_level === 'LOW' ? '#52c41a22' : anomalies?.risk_level === 'HIGH' ? '#ff4d4f22' : '#faad1422', borderColor: anomalies?.risk_level === 'LOW' ? '#52c41a' : anomalies?.risk_level === 'HIGH' ? '#ff4d4f' : '#faad14' }}
+                      >
+                        <Statistic 
+                          value={anomalies?.risk_level || 'N/A'}
+                          valueStyle={{ color: anomalies?.risk_level === 'LOW' ? '#52c41a' : anomalies?.risk_level === 'HIGH' ? '#ff4d4f' : '#faad14', fontSize: 28 }}
+                        />
+                        <p style={{ color: themeStyles.textColor, fontSize: 12, margin: '8px 0 0 0' }}>
+                          {anomalies?.risk_level === 'LOW' ? '✅ Safe to trade' :
+                           anomalies?.risk_level === 'HIGH' ? '🛑 High risk - Reduce position' :
+                           '⚡ Moderate risk - Use stop-loss'}
+                        </p>
+                      </Card>
+                    </Col>
+                  </Row>
+                  
+                  {/* Signal Explanation Box */}
+                  <Card 
+                    size="small" 
+                    style={{ marginTop: 16, background: ((enhancedSignals?.summary?.recommendation || signals?.signals?.summary?.recommendation || '').includes('BUY')) ? '#52c41a22' : ((enhancedSignals?.summary?.recommendation || signals?.signals?.summary?.recommendation || '').includes('SELL')) ? '#ff4d4f22' : '#faad1422', border: 'none' }}
+                  >
+                    <h4 style={{ color: themeStyles.textColor, margin: '0 0 8px 0' }}>💡 Signal Reasoning:</h4>
+                    <p style={{ color: themeStyles.textColor, margin: 0, fontSize: 14 }}>
+                      {enhancedSignals?.summary?.recommendation_explanation || (
+                        `Based on analysis: ${signals?.signals?.summary?.buy_signals || 0} buy signals, ${signals?.signals?.summary?.sell_signals || 0} sell signals, ${signals?.signals?.summary?.hold_signals || 0} hold signals out of ${signals?.signals?.summary?.total_signals || 0} total. ` +
+                        (sentimentData?.average_sentiment > 0.1 ? 'Positive sentiment supports upward movement. ' : sentimentData?.average_sentiment < -0.1 ? 'Negative sentiment suggests caution. ' : 'Neutral sentiment suggests waiting. ') +
+                        ((signals?.signals?.summary?.average_strength || 50) > 70 ? 'High signal strength indicates reliable prediction.' : 'Moderate signal strength - monitor closely.')
+                      )}
+                    </p>
+                  </Card>
+                </Card>
+              </Col>
+
+              {/* Summary Stats */}
               <Col span={24}>
                 <Card 
                   title={`${ticker} Automated Trading Signals`} 
@@ -791,7 +958,7 @@ function App() {
                               title={<span style={{ color: themeStyles.textColor }}>Buy Signals</span>}
                               value={signals.signals.summary.buy_signals || 0}
                               suffix={`/ ${signals.signals.summary.total_signals || 0}`}
-                              valueStyle={{ color: themeStyles.textColor }}
+                              valueStyle={{ color: '#52c41a' }}
                             />
                           </Card>
                         </Col>
@@ -801,7 +968,7 @@ function App() {
                               title={<span style={{ color: themeStyles.textColor }}>Sell Signals</span>}
                               value={signals.signals.summary.sell_signals || 0}
                               suffix={`/ ${signals.signals.summary.total_signals || 0}`}
-                              valueStyle={{ color: themeStyles.textColor }}
+                              valueStyle={{ color: '#ff4d4f' }}
                             />
                           </Card>
                         </Col>
@@ -1283,6 +1450,33 @@ function App() {
 
           <TabPane tab={<span><BarChartOutlined />Model Benchmark</span>} key="evaluation">
             <Row gutter={[24, 24]}>
+              {/* Model Comparison Explanation */}
+              <Col span={24}>
+                <Alert
+                  message="📊 Why Prophet is Our Recommended Model"
+                  description={
+                    <div style={{ marginTop: 8 }}>
+                      <p><strong>🏆 Prophet Model (Facebook/Meta):</strong></p>
+                      <ul style={{ marginLeft: 20 }}>
+                        <li><strong>Real-time Prediction:</strong> Prophet is specifically designed for time-series forecasting with daily observations and can handle real-time streaming data effectively.</li>
+                        <li><strong>Better Directional Accuracy:</strong> Prophet excels at predicting trend direction (up/down), which is crucial for trading decisions - more important than exact price prediction.</li>
+                        <li><strong>Handles Seasonality:</strong> Automatically detects daily, weekly, and yearly patterns in stock prices.</li>
+                        <li><strong>Robust to Missing Data:</strong> Can handle gaps in data without significant accuracy loss.</li>
+                      </ul>
+                      <p style={{ marginTop: 8 }}><strong>⚠️ Baseline Models (Naive/Moving Average):</strong></p>
+                      <ul style={{ marginLeft: 20 }}>
+                        <li><strong>Flatline Predictions:</strong> Naive model simply predicts the last known value - shows as a flat line, useless for trading.</li>
+                        <li><strong>Lagging Indicators:</strong> Moving Average lags behind actual price movements, missing trend changes.</li>
+                        <li><strong>No Pattern Learning:</strong> Cannot learn complex patterns from historical data.</li>
+                      </ul>
+                    </div>
+                  }
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              </Col>
+              
               <Col span={24}>
                 <Card 
                   title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>{ticker} Model Evaluation & Benchmarking</span>}
@@ -1293,9 +1487,54 @@ function App() {
                 >
                   {evaluationData ? (
                     <div>
-                      <h3 style={{ color: themeStyles.textColor, marginBottom: 16 }}>
-                        Best Model: <Tag color="green">{evaluationData.best_model || 'N/A'}</Tag>
-                      </h3>
+                      <Card 
+                        size="small" 
+                        style={{ marginBottom: 16, background: '#52c41a22', border: '1px solid #52c41a' }}
+                      >
+                        <h3 style={{ color: '#52c41a', margin: 0 }}>
+                          🏆 Best Performing Model: <Tag color="green" style={{ fontSize: 18, padding: '4px 12px' }}>{evaluationData.best_model || 'Prophet'}</Tag>
+                        </h3>
+                        <p style={{ color: themeStyles.textColor, margin: '8px 0 0 0' }}>
+                          {evaluationData.best_model === 'Prophet' || !evaluationData.best_model ? 
+                            'Prophet is selected based on lowest RMSE and highest directional accuracy - ideal for trading signal generation.' :
+                            `${evaluationData.best_model} shows the best performance for this specific dataset.`}
+                        </p>
+                      </Card>
+                      
+                      {/* Metric Explanation */}
+                      <Card size="small" style={{ marginBottom: 16, background: themeStyles.inputBg, border: `1px solid ${themeStyles.borderColor}` }}>
+                        <h4 style={{ color: themeStyles.textColor, margin: '0 0 8px 0' }}>📖 Understanding the Metrics:</h4>
+                        <Row gutter={[16, 8]}>
+                          <Col span={6}><p style={{ color: themeStyles.textColor, fontSize: 12, margin: 0 }}><strong>RMSE:</strong> Root Mean Square Error - Lower is better. Measures average prediction error.</p></Col>
+                          <Col span={6}><p style={{ color: themeStyles.textColor, fontSize: 12, margin: 0 }}><strong>MAE:</strong> Mean Absolute Error - Lower is better. Average absolute difference from actual.</p></Col>
+                          <Col span={6}><p style={{ color: themeStyles.textColor, fontSize: 12, margin: 0 }}><strong>Directional Accuracy:</strong> % of times model predicted correct up/down direction. Higher is better for trading!</p></Col>
+                          <Col span={6}><p style={{ color: themeStyles.textColor, fontSize: 12, margin: 0 }}><strong>Volatility Accuracy:</strong> How well model captures price volatility patterns.</p></Col>
+                        </Row>
+                      </Card>
+
+                      {/* Metrics Comparison Chart */}
+                      {evaluationData.model_metrics && Object.keys(evaluationData.model_metrics).length > 0 && (
+                        <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Model Comparison Chart</span>} style={{ marginBottom: 16, background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={Object.entries(evaluationData.model_metrics).map(([name, m]) => ({
+                              name,
+                              RMSE: m.RMSE || 0,
+                              MAE: m.MAE || 0,
+                              'Dir. Accuracy': m.Directional_Accuracy || 0
+                            }))}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <RechartsTooltip />
+                              <Legend />
+                              <Bar dataKey="RMSE" fill="#ff4d4f" name="RMSE (lower is better)" />
+                              <Bar dataKey="MAE" fill="#faad14" name="MAE (lower is better)" />
+                              <Bar dataKey="Dir. Accuracy" fill="#52c41a" name="Directional Accuracy %" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Card>
+                      )}
+                      
                       <div style={{ marginTop: 16 }}>
                         {Object.entries(evaluationData.model_metrics || {}).map(([model, metrics]) => (
                           <Card 
@@ -1303,13 +1542,17 @@ function App() {
                             size="small" 
                             style={{ 
                               marginBottom: 8, 
-                              background: themeStyles.cardBackground, 
-                              borderColor: themeStyles.borderColor 
+                              background: model === evaluationData.best_model ? '#52c41a11' : themeStyles.cardBackground, 
+                              borderColor: model === evaluationData.best_model ? '#52c41a' : themeStyles.borderColor 
                             }}
                             headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
-                            bodyStyle={{ background: themeStyles.cardBackground }}
+                            bodyStyle={{ background: 'transparent' }}
                           >
-                            <h4 style={{ color: themeStyles.textColor }}>{model}</h4>
+                            <h4 style={{ color: themeStyles.textColor }}>
+                              {model} {model === evaluationData.best_model && <Tag color="green">BEST</Tag>}
+                              {model === 'Naive' && <Tag color="orange">Baseline - Flatline</Tag>}
+                              {model === 'Moving_Average' && <Tag color="orange">Baseline - Lagging</Tag>}
+                            </h4>
                             <Row gutter={[16, 8]}>
                               {Object.entries(metrics || {}).map(([metric, value]) => (
                                 <Col span={6} key={metric}>
@@ -1401,15 +1644,25 @@ function App() {
             <Row gutter={[24, 24]}>
               <Col span={24}>
                 <Card 
-                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>{ticker} Backtesting Results</span>}
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>🧪 {ticker} Backtesting Results</span>}
                   extra={<Button type="primary" onClick={fetchBacktest}>Run Backtest</Button>}
                   style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
                   headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
                   bodyStyle={{ background: themeStyles.cardBackground }}
                 >
                   <Alert 
-                    message="What is Backtesting?" 
-                    description="Backtesting simulates how a trading strategy would have performed on historical data. It helps validate prediction models before using them for real trading." 
+                    message="📚 What is Backtesting & Why It Matters" 
+                    description={
+                      <div>
+                        <p><strong>Backtesting</strong> simulates how our trading strategy would have performed on historical data. This helps validate the Prophet prediction model before using it for real trading.</p>
+                        <ul style={{ marginLeft: 20, marginTop: 8 }}>
+                          <li><strong>Strategy Used:</strong> Trend-following based on Prophet predictions - BUY when model predicts upward movement, SELL when it predicts downward.</li>
+                          <li><strong>Benchmark:</strong> Compare against "Buy & Hold" - simply buying at start and holding until end.</li>
+                          <li><strong>Key Metric:</strong> If strategy outperforms Buy & Hold, the prediction model adds value.</li>
+                          <li><strong>Accuracy &gt; 50%:</strong> Means the model predicts direction correctly more often than random guessing.</li>
+                        </ul>
+                      </div>
+                    }
                     type="info" 
                     showIcon 
                     style={{ marginBottom: 24 }} 
@@ -1516,7 +1769,7 @@ function App() {
             <Row gutter={[24, 24]}>
               <Col span={24}>
                 <Card 
-                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>Stock Comparison</span>}
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>📊 Stock Comparison Analysis</span>}
                   style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
                   headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
                   bodyStyle={{ background: themeStyles.cardBackground }}
@@ -1537,6 +1790,75 @@ function App() {
                   </div>
                   {comparisonData?.comparison && comparisonData.comparison.length > 0 ? (
                     <div>
+                      {/* Comparison Charts */}
+                      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col span={12}>
+                          <Card size="small" title={<span style={{ color: themeStyles.textColor }}>📈 Returns Comparison</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <BarChart data={comparisonData.comparison}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="ticker" />
+                                <YAxis unit="%" />
+                                <RechartsTooltip formatter={(value) => [`${value.toFixed(2)}%`, '']} />
+                                <Legend />
+                                <Bar dataKey="daily_return" fill="#1890ff" name="Daily Return %" />
+                                <Bar dataKey="total_return" fill="#52c41a" name="Total Return %" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </Card>
+                        </Col>
+                        <Col span={12}>
+                          <Card size="small" title={<span style={{ color: themeStyles.textColor }}>⚡ Volatility & Sharpe Comparison</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <BarChart data={comparisonData.comparison}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="ticker" />
+                                <YAxis />
+                                <RechartsTooltip />
+                                <Legend />
+                                <Bar dataKey="volatility" fill="#ff4d4f" name="Volatility %" />
+                                <Bar dataKey="sharpe_ratio" fill="#722ed1" name="Sharpe Ratio" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </Card>
+                        </Col>
+                      </Row>
+                      
+                      {/* Sentiment Pie Chart */}
+                      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col span={12}>
+                          <Card size="small" title={<span style={{ color: themeStyles.textColor }}>😊 Sentiment Comparison</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <ResponsiveContainer width="100%" height={200}>
+                              <BarChart data={comparisonData.comparison} layout="vertical">
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" domain={[-1, 1]} />
+                                <YAxis type="category" dataKey="ticker" />
+                                <RechartsTooltip formatter={(value) => [value.toFixed(3), 'Sentiment']} />
+                                <Bar dataKey="sentiment" fill="#faad14" name="Sentiment Score">
+                                  {comparisonData.comparison.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.sentiment > 0.1 ? '#52c41a' : entry.sentiment < -0.1 ? '#ff4d4f' : '#faad14'} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </Card>
+                        </Col>
+                        <Col span={12}>
+                          <Card size="small" title={<span style={{ color: themeStyles.textColor }}>🏆 Rankings</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <p style={{ color: themeStyles.textColor }}><strong>📈 Best by Return:</strong> {comparisonData.rankings?.by_return?.[0] || 'N/A'}</p>
+                            <p style={{ color: themeStyles.textColor }}><strong>⚖️ Best Risk-Adjusted:</strong> {comparisonData.rankings?.by_risk_adjusted?.[0] || 'N/A'}</p>
+                            <Divider style={{ margin: '12px 0' }} />
+                            <p style={{ color: themeStyles.textColor, fontSize: 12 }}>
+                              <strong>Return Ranking:</strong> {comparisonData.rankings?.by_return?.join(' > ') || 'N/A'}
+                            </p>
+                            <p style={{ color: themeStyles.textColor, fontSize: 12 }}>
+                              <strong>Sharpe Ranking:</strong> {comparisonData.rankings?.by_risk_adjusted?.join(' > ') || 'N/A'}
+                            </p>
+                          </Card>
+                        </Col>
+                      </Row>
+
+                      {/* Data Table */}
                       <Table 
                         dataSource={comparisonData.comparison.map((c, i) => ({ ...c, key: i }))}
                         columns={[
@@ -1552,7 +1874,7 @@ function App() {
                       />
                       {comparisonData.recommendations && (
                         <Alert 
-                          message="Comparison Insights"
+                          message="🎯 Comparison Insights"
                           description={comparisonData.recommendations.interpretation}
                           type="info"
                           showIcon
@@ -1638,14 +1960,24 @@ function App() {
             <Row gutter={[24, 24]}>
               <Col span={12}>
                 <Card 
-                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>Execute Paper Trade</span>}
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>🎮 Execute Paper Trade</span>}
                   style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
                   headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
                   bodyStyle={{ background: themeStyles.cardBackground }}
                 >
                   <Alert 
-                    message="Paper Trading" 
-                    description="Practice trading without risking real money. All trades are simulated." 
+                    message="💡 Paper Trading Guide" 
+                    description={
+                      <div>
+                        <p style={{ margin: 0 }}>Practice trading without risking real money. All trades use actual market prices but with virtual capital.</p>
+                        <ul style={{ marginLeft: 16, marginTop: 8, marginBottom: 0 }}>
+                          <li><strong>Starting Capital:</strong> $100,000 virtual money</li>
+                          <li><strong>Use AI Recommendation:</strong> Follow the signal above to decide BUY/SELL</li>
+                          <li><strong>Stop Loss & Take Profit:</strong> Suggested levels to manage risk</li>
+                          <li><strong>Track P&L:</strong> Monitor your portfolio performance over time</li>
+                        </ul>
+                      </div>
+                    }
                     type="info" 
                     showIcon 
                     style={{ marginBottom: 16 }} 
@@ -1715,13 +2047,36 @@ function App() {
           {/* NEW: Final Recommendation Tab */}
           <TabPane tab={<span><TrophyOutlined />Final Call</span>} key="final">
             <Row gutter={[24, 24]}>
+              {/* How Final Recommendation Works */}
+              <Col span={24}>
+                <Alert
+                  message="🎯 How the Final Recommendation is Calculated"
+                  description={
+                    <div>
+                      <p>The Final Recommendation combines multiple analysis components into a single actionable signal:</p>
+                      <Row gutter={[8, 8]} style={{ marginTop: 8 }}>
+                        <Col span={6}><Tag color="blue">Forecast Model (40%)</Tag> - Prophet prediction trend direction</Col>
+                        <Col span={6}><Tag color="green">News Sentiment (20%)</Tag> - Market sentiment from recent news</Col>
+                        <Col span={6}><Tag color="orange">Trading Signals (25%)</Tag> - Technical indicator signals</Col>
+                        <Col span={6}><Tag color="red">Risk Level (15%)</Tag> - Anomaly detection penalty</Col>
+                      </Row>
+                      <p style={{ marginTop: 8, marginBottom: 0 }}><strong>Note:</strong> This recommendation syncs with the main dashboard card at the top for consistency.</p>
+                    </div>
+                  }
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              </Col>
               <Col span={24}>
                 {finalRecommendation ? (
                   <Card 
                     style={{ 
-                      background: finalRecommendation.final_recommendation?.includes('BUY') ? 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)' :
-                                finalRecommendation.final_recommendation?.includes('SELL') ? 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%)' :
-                                'linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)',
+                      background: (finalRecommendation.final_recommendation || '').includes('STRONG_BUY') ? 'linear-gradient(135deg, #237804 0%, #52c41a 100%)' :
+                                (finalRecommendation.final_recommendation || '').includes('BUY') ? 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)' :
+                                (finalRecommendation.final_recommendation || '').includes('STRONG_SELL') ? 'linear-gradient(135deg, #a8071a 0%, #ff4d4f 100%)' :
+                                (finalRecommendation.final_recommendation || '').includes('SELL') ? 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%)' :
+                                'linear-gradient(135deg, #d48806 0%, #faad14 100%)',
                       border: 'none',
                       borderRadius: 12
                     }}
@@ -1729,29 +2084,29 @@ function App() {
                     <Row gutter={[24, 24]} align="middle">
                       <Col span={12}>
                         <h1 style={{ color: 'white', fontSize: 48, margin: 0 }}>
-                          {finalRecommendation.final_recommendation?.includes('STRONG_BUY') ? '🚀' : 
-                           finalRecommendation.final_recommendation?.includes('BUY') ? '📈' :
-                           finalRecommendation.final_recommendation?.includes('STRONG_SELL') ? '📉' :
-                           finalRecommendation.final_recommendation?.includes('SELL') ? '⬇️' : '⏸️'}
-                          {finalRecommendation.final_recommendation}
+                          {(finalRecommendation.final_recommendation || '').includes('STRONG_BUY') ? '🚀' : 
+                           (finalRecommendation.final_recommendation || '').includes('BUY') ? '📈' :
+                           (finalRecommendation.final_recommendation || '').includes('STRONG_SELL') ? '📉' :
+                           (finalRecommendation.final_recommendation || '').includes('SELL') ? '⬇️' : '⏸️'}
+                          {' '}{finalRecommendation.final_recommendation || 'ANALYZING...'}
                         </h1>
                         <p style={{ color: 'white', fontSize: 20, margin: '16px 0' }}>
-                          {ticker} @ ${finalRecommendation.current_price?.toFixed(2)}
+                          {ticker} @ ${finalRecommendation.current_price?.toFixed(2) || 'N/A'}
                         </p>
                         <Tag color="rgba(255,255,255,0.3)" style={{ color: 'white', fontSize: 16, padding: '4px 12px' }}>
-                          Confidence: {finalRecommendation.confidence}
+                          Confidence: {finalRecommendation.confidence || 'CALCULATING'}
                         </Tag>
                       </Col>
                       <Col span={12}>
                         <Card style={{ background: 'rgba(255,255,255,0.2)', border: 'none' }}>
                           <Statistic 
                             title={<span style={{ color: 'white' }}>Composite Score</span>}
-                            value={finalRecommendation.composite_score || 0}
-                            precision={3}
+                            value={finalRecommendation.composite_score ? (finalRecommendation.composite_score * 100).toFixed(1) : 0}
+                            precision={1}
                             valueStyle={{ color: 'white', fontSize: 36 }}
                           />
                           <p style={{ color: 'white', margin: '8px 0' }}>
-                            Predicted Change: {finalRecommendation.components?.forecast?.predicted_change || 0}%
+                            Predicted Change: {finalRecommendation.components?.forecast?.predicted_change?.toFixed(2) || 0}%
                           </p>
                         </Card>
                       </Col>
