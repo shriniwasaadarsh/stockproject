@@ -41,7 +41,7 @@ def start_api_server():
     """Start the API server"""
     print("\nStarting API server...")
     print("API will be available at: http://localhost:8000")
-    print("API documentation at: http://localhost:8000/docs")
+    print("API documentation going at: http://localhost:8000/docs")
     print("Press Ctrl+C to stop the server")
     print("-" * 50)
     
