@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Card, Row, Col, Select, Button, Spin, Alert, Tabs, Statistic, Tag, Table, InputNumber, Divider, Space, Tooltip, Progress, Input, message } from 'antd';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Area, AreaChart, BarChart, Bar } from 'recharts';
+import { Layout, Card, Row, Col, Select, Button, Spin, Alert, Tabs, Statistic, Tag, Table, InputNumber, Divider, Space, Tooltip, Progress, Input, message, Badge, List, Timeline, Modal, Drawer } from 'antd';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Area, AreaChart, BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ComposedChart, Scatter, PieChart, Pie, Cell } from 'recharts';
 import { 
   StockOutlined, RiseOutlined, BarChartOutlined, HeartOutlined, 
   WarningOutlined, DollarOutlined, SignalFilled, SafetyOutlined,
-  SunOutlined, MoonOutlined, PlusOutlined, CloseOutlined
+  SunOutlined, MoonOutlined, PlusOutlined, CloseOutlined, 
+  BellOutlined, ExperimentOutlined, SwapOutlined, BulbOutlined,
+  PlayCircleOutlined, FileTextOutlined, TrophyOutlined, ThunderboltOutlined,
+  CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import moment from 'moment';
 
-const { Header, Content } = Layout;
+const { Header, Content, Sider } = Layout;
 const { Option } = Select;
 const { TabPane } = Tabs;
 
@@ -32,6 +35,20 @@ function App() {
   // Make tickers dynamic with state
   const [tickers, setTickers] = useState(['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'JPM', 'V', 'WMT']);
   const [newTicker, setNewTicker] = useState('');
+  
+  // New states for advanced features
+  const [newsData, setNewsData] = useState(null);
+  const [alertsData, setAlertsData] = useState(null);
+  const [backtestData, setBacktestData] = useState(null);
+  const [comparisonData, setComparisonData] = useState(null);
+  const [marketInsights, setMarketInsights] = useState(null);
+  const [paperTradeAccount, setPaperTradeAccount] = useState(null);
+  const [tradeRecommendation, setTradeRecommendation] = useState(null);
+  const [finalRecommendation, setFinalRecommendation] = useState(null);
+  const [enhancedSignals, setEnhancedSignals] = useState(null);
+  const [showNewsDrawer, setShowNewsDrawer] = useState(false);
+  const [compareTickersList, setCompareTickersList] = useState(['AAPL', 'GOOGL', 'MSFT']);
+  const [paperTradeForm, setPaperTradeForm] = useState({ ticker: 'AAPL', action: 'BUY', shares: 10, price: 0 });
   
   // Function to add a new ticker
   const addTicker = () => {
@@ -156,12 +173,147 @@ function App() {
     }
   };
 
+  // New fetch functions for advanced features
+  const fetchNews = async () => {
+    try {
+      const response = await axios.post('/news', {
+        ticker: ticker,
+        days_back: 7
+      });
+      setNewsData(response.data);
+    } catch (err) {
+      console.error('Failed to fetch news:', err);
+    }
+  };
+
+  const fetchAlerts = async () => {
+    try {
+      const response = await axios.post('/alerts', {
+        ticker: ticker,
+        days: 30,
+        model_type: modelType
+      });
+      setAlertsData(response.data);
+    } catch (err) {
+      console.error('Failed to fetch alerts:', err);
+    }
+  };
+
+  const fetchBacktest = async () => {
+    try {
+      const response = await axios.post('/backtest', {
+        ticker: ticker,
+        initial_capital: 10000
+      });
+      setBacktestData(response.data);
+    } catch (err) {
+      console.error('Failed to fetch backtest:', err);
+    }
+  };
+
+  const fetchComparison = async () => {
+    try {
+      const response = await axios.post('/compare', {
+        tickers: compareTickersList
+      });
+      setComparisonData(response.data);
+    } catch (err) {
+      console.error('Failed to fetch comparison:', err);
+    }
+  };
+
+  const fetchMarketInsights = async () => {
+    try {
+      const response = await axios.post('/market-insights', {
+        ticker: ticker,
+        days: 30,
+        model_type: modelType
+      });
+      setMarketInsights(response.data);
+    } catch (err) {
+      console.error('Failed to fetch market insights:', err);
+    }
+  };
+
+  const fetchPaperTradeAccount = async () => {
+    try {
+      const response = await axios.get('/paper-trade/account');
+      setPaperTradeAccount(response.data);
+    } catch (err) {
+      console.error('Failed to fetch paper trade account:', err);
+    }
+  };
+
+  const fetchTradeRecommendation = async () => {
+    try {
+      const response = await axios.post('/paper-trade/recommendation', {
+        ticker: ticker,
+        days: 30,
+        model_type: modelType
+      });
+      setTradeRecommendation(response.data);
+      setPaperTradeForm(prev => ({ ...prev, price: response.data.entry_price }));
+    } catch (err) {
+      console.error('Failed to fetch trade recommendation:', err);
+    }
+  };
+
+  const executePaperTrade = async () => {
+    try {
+      const response = await axios.post('/paper-trade', {
+        ticker: paperTradeForm.ticker,
+        action: paperTradeForm.action,
+        shares: paperTradeForm.shares,
+        price: paperTradeForm.price
+      });
+      if (response.data.status === 'success') {
+        message.success(`${paperTradeForm.action} order executed successfully!`);
+        fetchPaperTradeAccount();
+      }
+    } catch (err) {
+      message.error(err.response?.data?.detail || 'Trade execution failed');
+    }
+  };
+
+  const fetchFinalRecommendation = async () => {
+    try {
+      const response = await axios.post('/final-recommendation', {
+        ticker: ticker,
+        days: 30,
+        model_type: modelType
+      });
+      setFinalRecommendation(response.data);
+    } catch (err) {
+      console.error('Failed to fetch final recommendation:', err);
+    }
+  };
+
+  const fetchEnhancedSignals = async () => {
+    try {
+      const response = await axios.post('/signals-enhanced', {
+        ticker: ticker,
+        days: 30,
+        model_type: modelType
+      });
+      setEnhancedSignals(response.data);
+    } catch (err) {
+      console.error('Failed to fetch enhanced signals:', err);
+    }
+  };
+
   useEffect(() => {
     fetchForecast();
     fetchSentiment();
     fetchEvaluation();
     fetchSignals();
     fetchAnomalies();
+    fetchNews();
+    fetchAlerts();
+    fetchMarketInsights();
+    fetchFinalRecommendation();
+    fetchEnhancedSignals();
+    fetchPaperTradeAccount();
+    fetchTradeRecommendation();
   }, [ticker, modelType]);
 
   useEffect(() => {
@@ -1179,6 +1331,564 @@ function App() {
                     <div className="loading-container">
                       <Spin size="large" />
                     </div>
+                  )}
+                </Card>
+              </Col>
+            </Row>
+          </TabPane>
+
+          {/* NEW: Alerts Tab */}
+          <TabPane tab={<span><BellOutlined />Alerts</span>} key="alerts">
+            <Row gutter={[24, 24]}>
+              <Col span={24}>
+                <Card 
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>{ticker} Trading Alerts</span>}
+                  extra={<Badge count={alertsData?.alert_count || 0} />}
+                  style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                  headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                  bodyStyle={{ background: themeStyles.cardBackground }}
+                >
+                  {alertsData?.alerts && alertsData.alerts.length > 0 ? (
+                    <div>
+                      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col span={8}>
+                          <Card size="small" style={{ background: '#ff4d4f22', border: '1px solid #ff4d4f' }}>
+                            <Statistic title="High Priority" value={alertsData.high_priority_count || 0} valueStyle={{ color: '#ff4d4f' }} prefix={<ExclamationCircleOutlined />} />
+                          </Card>
+                        </Col>
+                        <Col span={8}>
+                          <Card size="small" style={{ background: '#faad1422', border: '1px solid #faad14' }}>
+                            <Statistic title="Medium Priority" value={alertsData.medium_priority_count || 0} valueStyle={{ color: '#faad14' }} prefix={<WarningOutlined />} />
+                          </Card>
+                        </Col>
+                        <Col span={8}>
+                          <Card size="small" style={{ background: '#52c41a22', border: '1px solid #52c41a' }}>
+                            <Statistic title="Low Priority" value={alertsData.low_priority_count || 0} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
+                          </Card>
+                        </Col>
+                      </Row>
+                      <Timeline>
+                        {alertsData.alerts.map((alert, idx) => (
+                          <Timeline.Item 
+                            key={idx} 
+                            color={alert.severity === 'HIGH' ? 'red' : alert.severity === 'MEDIUM' ? 'orange' : 'green'}
+                          >
+                            <Card size="small" style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                              <h4 style={{ color: themeStyles.textColor, margin: 0 }}>{alert.title}</h4>
+                              <p style={{ color: themeStyles.textColor, opacity: 0.8, margin: '8px 0' }}>{alert.message}</p>
+                              <Tag color={alert.severity === 'HIGH' ? 'red' : alert.severity === 'MEDIUM' ? 'orange' : 'green'}>
+                                {alert.severity}
+                              </Tag>
+                              <div style={{ marginTop: 8, padding: '8px', background: themeStyles.inputBg, borderRadius: '4px' }}>
+                                <strong style={{ color: themeStyles.textColor }}>Recommendation: </strong>
+                                <span style={{ color: themeStyles.textColor }}>{alert.recommendation}</span>
+                              </div>
+                            </Card>
+                          </Timeline.Item>
+                        ))}
+                      </Timeline>
+                    </div>
+                  ) : (
+                    <Alert message="No alerts at this time" description="All indicators are within normal ranges." type="success" showIcon />
+                  )}
+                </Card>
+              </Col>
+            </Row>
+          </TabPane>
+
+          {/* NEW: Backtesting Tab */}
+          <TabPane tab={<span><ExperimentOutlined />Backtest</span>} key="backtest">
+            <Row gutter={[24, 24]}>
+              <Col span={24}>
+                <Card 
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>{ticker} Backtesting Results</span>}
+                  extra={<Button type="primary" onClick={fetchBacktest}>Run Backtest</Button>}
+                  style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                  headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                  bodyStyle={{ background: themeStyles.cardBackground }}
+                >
+                  <Alert 
+                    message="What is Backtesting?" 
+                    description="Backtesting simulates how a trading strategy would have performed on historical data. It helps validate prediction models before using them for real trading." 
+                    type="info" 
+                    showIcon 
+                    style={{ marginBottom: 24 }} 
+                  />
+                  {backtestData ? (
+                    <div>
+                      <Row gutter={[16, 16]}>
+                        <Col span={6}>
+                          <Card size="small" style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <Statistic 
+                              title={<span style={{ color: themeStyles.textColor }}>Initial Capital</span>}
+                              value={backtestData.initial_capital || 10000}
+                              prefix="$"
+                              valueStyle={{ color: themeStyles.textColor }}
+                            />
+                          </Card>
+                        </Col>
+                        <Col span={6}>
+                          <Card size="small" style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <Statistic 
+                              title={<span style={{ color: themeStyles.textColor }}>Final Value</span>}
+                              value={backtestData.final_value || 0}
+                              prefix="$"
+                              precision={2}
+                              valueStyle={{ color: (backtestData.total_return || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}
+                            />
+                          </Card>
+                        </Col>
+                        <Col span={6}>
+                          <Card size="small" style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <Statistic 
+                              title={<span style={{ color: themeStyles.textColor }}>Strategy Return</span>}
+                              value={backtestData.total_return || 0}
+                              suffix="%"
+                              precision={2}
+                              valueStyle={{ color: (backtestData.total_return || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}
+                            />
+                          </Card>
+                        </Col>
+                        <Col span={6}>
+                          <Card size="small" style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <Statistic 
+                              title={<span style={{ color: themeStyles.textColor }}>Prediction Accuracy</span>}
+                              value={backtestData.prediction_accuracy || 0}
+                              suffix="%"
+                              precision={1}
+                              valueStyle={{ color: (backtestData.prediction_accuracy || 0) >= 50 ? '#52c41a' : '#ff4d4f' }}
+                            />
+                          </Card>
+                        </Col>
+                      </Row>
+                      <Divider />
+                      <Row gutter={[16, 16]}>
+                        <Col span={12}>
+                          <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Performance Comparison</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <p style={{ color: themeStyles.textColor }}><strong>Buy & Hold Return:</strong> {(backtestData.buy_hold_return || 0).toFixed(2)}%</p>
+                            <p style={{ color: themeStyles.textColor }}><strong>Strategy Outperformance:</strong> 
+                              <Tag color={(backtestData.outperformance || 0) >= 0 ? 'green' : 'red'} style={{ marginLeft: 8 }}>
+                                {(backtestData.outperformance || 0) >= 0 ? '+' : ''}{(backtestData.outperformance || 0).toFixed(2)}%
+                              </Tag>
+                            </p>
+                            <p style={{ color: themeStyles.textColor }}><strong>Verdict:</strong> {backtestData.performance_verdict}</p>
+                          </Card>
+                        </Col>
+                        <Col span={12}>
+                          <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Trade Statistics</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <p style={{ color: themeStyles.textColor }}><strong>Total Trades:</strong> {backtestData.total_trades || 0}</p>
+                            <p style={{ color: themeStyles.textColor }}><strong>Correct Predictions:</strong> {backtestData.predictions_correct || 0} / {backtestData.predictions_total || 0}</p>
+                          </Card>
+                        </Col>
+                      </Row>
+                      {backtestData.trades && backtestData.trades.length > 0 && (
+                        <>
+                          <Divider>Recent Trades</Divider>
+                          <Table 
+                            dataSource={backtestData.trades.map((t, i) => ({ ...t, key: i }))}
+                            columns={[
+                              { title: 'Date', dataIndex: 'date', key: 'date', render: d => moment(d).format('MMM DD, HH:mm') },
+                              { title: 'Action', dataIndex: 'action', key: 'action', render: a => <Tag color={a === 'BUY' ? 'green' : 'red'}>{a}</Tag> },
+                              { title: 'Price', dataIndex: 'price', key: 'price', render: p => `$${p.toFixed(2)}` },
+                              { title: 'Shares', dataIndex: 'shares', key: 'shares' },
+                              { title: 'Cash After', dataIndex: 'capital_after', key: 'capital_after', render: c => `$${c.toFixed(2)}` }
+                            ]}
+                            pagination={false}
+                            size="small"
+                          />
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: 40 }}>
+                      <Button type="primary" size="large" onClick={fetchBacktest} icon={<ExperimentOutlined />}>
+                        Run Backtest Simulation
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              </Col>
+            </Row>
+          </TabPane>
+
+          {/* NEW: Stock Comparison Tab */}
+          <TabPane tab={<span><SwapOutlined />Compare</span>} key="compare">
+            <Row gutter={[24, 24]}>
+              <Col span={24}>
+                <Card 
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>Stock Comparison</span>}
+                  style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                  headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                  bodyStyle={{ background: themeStyles.cardBackground }}
+                >
+                  <div style={{ marginBottom: 24 }}>
+                    <Space>
+                      <Select 
+                        mode="multiple" 
+                        value={compareTickersList} 
+                        onChange={setCompareTickersList}
+                        style={{ minWidth: 300 }}
+                        placeholder="Select stocks to compare"
+                      >
+                        {tickers.map(t => <Option key={t} value={t}>{t}</Option>)}
+                      </Select>
+                      <Button type="primary" onClick={fetchComparison}>Compare</Button>
+                    </Space>
+                  </div>
+                  {comparisonData?.comparison && comparisonData.comparison.length > 0 ? (
+                    <div>
+                      <Table 
+                        dataSource={comparisonData.comparison.map((c, i) => ({ ...c, key: i }))}
+                        columns={[
+                          { title: 'Ticker', dataIndex: 'ticker', key: 'ticker', render: t => <Tag color="blue">{t}</Tag> },
+                          { title: 'Price', dataIndex: 'current_price', key: 'price', render: p => `$${p.toFixed(2)}` },
+                          { title: 'Daily Return', dataIndex: 'daily_return', key: 'daily', render: r => <span style={{ color: r >= 0 ? '#52c41a' : '#ff4d4f' }}>{r >= 0 ? '+' : ''}{r.toFixed(2)}%</span> },
+                          { title: 'Total Return', dataIndex: 'total_return', key: 'total', render: r => <span style={{ color: r >= 0 ? '#52c41a' : '#ff4d4f' }}>{r >= 0 ? '+' : ''}{r.toFixed(2)}%</span> },
+                          { title: 'Volatility', dataIndex: 'volatility', key: 'vol', render: v => `${v.toFixed(2)}%` },
+                          { title: 'Sharpe Ratio', dataIndex: 'sharpe_ratio', key: 'sharpe', render: s => s.toFixed(2) },
+                          { title: 'Sentiment', dataIndex: 'sentiment', key: 'sentiment', render: s => <Tag color={s > 0.1 ? 'green' : s < -0.1 ? 'red' : 'orange'}>{s.toFixed(3)}</Tag> }
+                        ]}
+                        pagination={false}
+                      />
+                      {comparisonData.recommendations && (
+                        <Alert 
+                          message="Comparison Insights"
+                          description={comparisonData.recommendations.interpretation}
+                          type="info"
+                          showIcon
+                          style={{ marginTop: 16 }}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <Alert message="Select stocks and click Compare" type="info" showIcon />
+                  )}
+                </Card>
+              </Col>
+            </Row>
+          </TabPane>
+
+          {/* NEW: Market Insights Tab */}
+          <TabPane tab={<span><BulbOutlined />Insights</span>} key="insights">
+            <Row gutter={[24, 24]}>
+              <Col span={24}>
+                <Card 
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>{ticker} Market Insights</span>}
+                  style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                  headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                  bodyStyle={{ background: themeStyles.cardBackground }}
+                >
+                  {marketInsights ? (
+                    <Row gutter={[24, 24]}>
+                      <Col span={8}>
+                        <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Trend Analysis</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                          <Statistic 
+                            value={marketInsights.trend_analysis?.trend || 'N/A'}
+                            valueStyle={{ color: marketInsights.trend_analysis?.trend?.includes('BULL') ? '#52c41a' : marketInsights.trend_analysis?.trend?.includes('BEAR') ? '#ff4d4f' : '#faad14', fontSize: 18 }}
+                          />
+                          <p style={{ color: themeStyles.textColor, marginTop: 8, fontSize: 12 }}>{marketInsights.trend_analysis?.description}</p>
+                        </Card>
+                      </Col>
+                      <Col span={8}>
+                        <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Momentum</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                          <Statistic 
+                            value={marketInsights.momentum_analysis?.momentum || 'N/A'}
+                            valueStyle={{ color: marketInsights.momentum_analysis?.momentum?.includes('POSITIVE') ? '#52c41a' : '#ff4d4f', fontSize: 18 }}
+                          />
+                          <p style={{ color: themeStyles.textColor, marginTop: 8, fontSize: 12 }}>{marketInsights.momentum_analysis?.insight}</p>
+                        </Card>
+                      </Col>
+                      <Col span={8}>
+                        <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Volatility</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                          <Statistic 
+                            value={marketInsights.volatility_analysis?.assessment || 'N/A'}
+                            valueStyle={{ color: marketInsights.volatility_analysis?.assessment === 'LOW' ? '#52c41a' : marketInsights.volatility_analysis?.assessment === 'HIGH' ? '#ff4d4f' : '#faad14', fontSize: 18 }}
+                          />
+                          <p style={{ color: themeStyles.textColor, marginTop: 8, fontSize: 12 }}>{marketInsights.volatility_analysis?.insight}</p>
+                        </Card>
+                      </Col>
+                      <Col span={24}>
+                        <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Key Price Levels</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                          <Row gutter={16}>
+                            <Col span={8}><Statistic title="Resistance" value={marketInsights.key_levels?.resistance || 0} prefix="$" precision={2} valueStyle={{ color: '#ff4d4f' }} /></Col>
+                            <Col span={8}><Statistic title="Current" value={marketInsights.current_price || 0} prefix="$" precision={2} valueStyle={{ color: '#1890ff' }} /></Col>
+                            <Col span={8}><Statistic title="Support" value={marketInsights.key_levels?.support || 0} prefix="$" precision={2} valueStyle={{ color: '#52c41a' }} /></Col>
+                          </Row>
+                        </Card>
+                      </Col>
+                      <Col span={24}>
+                        <Alert 
+                          message={`Overall Outlook: ${marketInsights.overall_outlook?.sentiment || 'N/A'}`}
+                          description={`Confidence: ${marketInsights.overall_outlook?.confidence || 'N/A'}. Volume trend: ${marketInsights.volume_analysis?.trend || 'N/A'}. ${marketInsights.volume_analysis?.insight || ''}`}
+                          type={marketInsights.overall_outlook?.sentiment === 'BULLISH' ? 'success' : marketInsights.overall_outlook?.sentiment === 'BEARISH' ? 'error' : 'info'}
+                          showIcon
+                        />
+                      </Col>
+                    </Row>
+                  ) : (
+                    <Spin size="large" />
+                  )}
+                </Card>
+              </Col>
+            </Row>
+          </TabPane>
+
+          {/* NEW: Paper Trading Tab */}
+          <TabPane tab={<span><PlayCircleOutlined />Paper Trade</span>} key="paper-trade">
+            <Row gutter={[24, 24]}>
+              <Col span={12}>
+                <Card 
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>Execute Paper Trade</span>}
+                  style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                  headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                  bodyStyle={{ background: themeStyles.cardBackground }}
+                >
+                  <Alert 
+                    message="Paper Trading" 
+                    description="Practice trading without risking real money. All trades are simulated." 
+                    type="info" 
+                    showIcon 
+                    style={{ marginBottom: 16 }} 
+                  />
+                  {tradeRecommendation && (
+                    <Card size="small" style={{ marginBottom: 16, background: tradeRecommendation.recommendation === 'BUY' ? '#52c41a22' : tradeRecommendation.recommendation === 'SELL' ? '#ff4d4f22' : '#faad1422' }}>
+                      <h4 style={{ color: themeStyles.textColor }}>AI Recommendation: {tradeRecommendation.recommendation}</h4>
+                      <p style={{ color: themeStyles.textColor }}>{tradeRecommendation.rationale}</p>
+                      {tradeRecommendation.stop_loss && <p style={{ color: themeStyles.textColor }}><strong>Stop Loss:</strong> ${tradeRecommendation.stop_loss} | <strong>Take Profit:</strong> ${tradeRecommendation.take_profit}</p>}
+                    </Card>
+                  )}
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Select value={paperTradeForm.ticker} onChange={v => setPaperTradeForm({ ...paperTradeForm, ticker: v })} style={{ width: '100%' }}>
+                      {tickers.map(t => <Option key={t} value={t}>{t}</Option>)}
+                    </Select>
+                    <Select value={paperTradeForm.action} onChange={v => setPaperTradeForm({ ...paperTradeForm, action: v })} style={{ width: '100%' }}>
+                      <Option value="BUY">BUY</Option>
+                      <Option value="SELL">SELL</Option>
+                    </Select>
+                    <InputNumber placeholder="Shares" value={paperTradeForm.shares} onChange={v => setPaperTradeForm({ ...paperTradeForm, shares: v })} style={{ width: '100%' }} min={1} />
+                    <InputNumber placeholder="Price" value={paperTradeForm.price} onChange={v => setPaperTradeForm({ ...paperTradeForm, price: v })} style={{ width: '100%' }} min={0.01} step={0.01} prefix="$" />
+                    <Button type="primary" block onClick={executePaperTrade} icon={<PlayCircleOutlined />}>
+                      Execute {paperTradeForm.action} Order
+                    </Button>
+                  </Space>
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card 
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>Account Summary</span>}
+                  extra={<Button onClick={fetchPaperTradeAccount}>Refresh</Button>}
+                  style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                  headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                  bodyStyle={{ background: themeStyles.cardBackground }}
+                >
+                  {paperTradeAccount ? (
+                    <div>
+                      <Row gutter={[16, 16]}>
+                        <Col span={12}><Statistic title="Cash" value={paperTradeAccount.cash || 100000} prefix="$" precision={2} valueStyle={{ color: themeStyles.textColor }} /></Col>
+                        <Col span={12}><Statistic title="Total Value" value={paperTradeAccount.total_value || 100000} prefix="$" precision={2} valueStyle={{ color: '#1890ff' }} /></Col>
+                        <Col span={12}><Statistic title="Total P&L" value={paperTradeAccount.total_pnl || 0} prefix="$" precision={2} valueStyle={{ color: (paperTradeAccount.total_pnl || 0) >= 0 ? '#52c41a' : '#ff4d4f' }} /></Col>
+                        <Col span={12}><Statistic title="Total Trades" value={paperTradeAccount.trade_count || 0} valueStyle={{ color: themeStyles.textColor }} /></Col>
+                      </Row>
+                      {paperTradeAccount.positions && paperTradeAccount.positions.length > 0 && (
+                        <>
+                          <Divider>Open Positions</Divider>
+                          {paperTradeAccount.positions.map((pos, idx) => (
+                            <Card key={idx} size="small" style={{ marginBottom: 8, background: themeStyles.inputBg }}>
+                              <Row justify="space-between">
+                                <Col><Tag color="blue">{pos.ticker}</Tag></Col>
+                                <Col>{pos.shares} shares @ ${pos.avg_cost?.toFixed(2)}</Col>
+                                <Col>Value: ${pos.current_value?.toFixed(2)}</Col>
+                              </Row>
+                            </Card>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <Alert message="Starting Capital: $100,000" type="info" showIcon />
+                  )}
+                </Card>
+              </Col>
+            </Row>
+          </TabPane>
+
+          {/* NEW: Final Recommendation Tab */}
+          <TabPane tab={<span><TrophyOutlined />Final Call</span>} key="final">
+            <Row gutter={[24, 24]}>
+              <Col span={24}>
+                {finalRecommendation ? (
+                  <Card 
+                    style={{ 
+                      background: finalRecommendation.final_recommendation?.includes('BUY') ? 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)' :
+                                finalRecommendation.final_recommendation?.includes('SELL') ? 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%)' :
+                                'linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)',
+                      border: 'none',
+                      borderRadius: 12
+                    }}
+                  >
+                    <Row gutter={[24, 24]} align="middle">
+                      <Col span={12}>
+                        <h1 style={{ color: 'white', fontSize: 48, margin: 0 }}>
+                          {finalRecommendation.final_recommendation?.includes('STRONG_BUY') ? '🚀' : 
+                           finalRecommendation.final_recommendation?.includes('BUY') ? '📈' :
+                           finalRecommendation.final_recommendation?.includes('STRONG_SELL') ? '📉' :
+                           finalRecommendation.final_recommendation?.includes('SELL') ? '⬇️' : '⏸️'}
+                          {finalRecommendation.final_recommendation}
+                        </h1>
+                        <p style={{ color: 'white', fontSize: 20, margin: '16px 0' }}>
+                          {ticker} @ ${finalRecommendation.current_price?.toFixed(2)}
+                        </p>
+                        <Tag color="rgba(255,255,255,0.3)" style={{ color: 'white', fontSize: 16, padding: '4px 12px' }}>
+                          Confidence: {finalRecommendation.confidence}
+                        </Tag>
+                      </Col>
+                      <Col span={12}>
+                        <Card style={{ background: 'rgba(255,255,255,0.2)', border: 'none' }}>
+                          <Statistic 
+                            title={<span style={{ color: 'white' }}>Composite Score</span>}
+                            value={finalRecommendation.composite_score || 0}
+                            precision={3}
+                            valueStyle={{ color: 'white', fontSize: 36 }}
+                          />
+                          <p style={{ color: 'white', margin: '8px 0' }}>
+                            Predicted Change: {finalRecommendation.components?.forecast?.predicted_change || 0}%
+                          </p>
+                        </Card>
+                      </Col>
+                    </Row>
+                  </Card>
+                ) : (
+                  <Spin size="large" />
+                )}
+              </Col>
+              {finalRecommendation && (
+                <>
+                  <Col span={24}>
+                    <Card 
+                      title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>Decision Reasoning</span>}
+                      style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                      headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                      bodyStyle={{ background: themeStyles.cardBackground }}
+                    >
+                      <List
+                        dataSource={finalRecommendation.reasoning || []}
+                        renderItem={item => (
+                          <List.Item style={{ color: themeStyles.textColor, borderColor: themeStyles.borderColor }}>
+                            <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
+                            {item}
+                          </List.Item>
+                        )}
+                      />
+                    </Card>
+                  </Col>
+                  <Col span={6}>
+                    <Card size="small" title={<span style={{ color: themeStyles.textColor }}>News Sentiment</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                      <Statistic value={finalRecommendation.components?.news_sentiment?.impact || 'N/A'} valueStyle={{ color: finalRecommendation.components?.news_sentiment?.score > 0 ? '#52c41a' : '#ff4d4f' }} />
+                      <Progress percent={Math.abs((finalRecommendation.components?.news_sentiment?.score || 0) * 100)} size="small" />
+                    </Card>
+                  </Col>
+                  <Col span={6}>
+                    <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Trading Signals</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                      <Statistic value={finalRecommendation.components?.signals?.recommendation || 'N/A'} valueStyle={{ color: finalRecommendation.components?.signals?.recommendation?.includes('BUY') ? '#52c41a' : '#ff4d4f' }} />
+                      <p style={{ color: themeStyles.textColor, fontSize: 12 }}>Buy: {finalRecommendation.components?.signals?.buy_signals} | Sell: {finalRecommendation.components?.signals?.sell_signals}</p>
+                    </Card>
+                  </Col>
+                  <Col span={6}>
+                    <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Risk Level</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                      <Statistic value={finalRecommendation.components?.risk?.level || 'N/A'} valueStyle={{ color: finalRecommendation.components?.risk?.level === 'LOW' ? '#52c41a' : finalRecommendation.components?.risk?.level === 'HIGH' ? '#ff4d4f' : '#faad14' }} />
+                      <p style={{ color: themeStyles.textColor, fontSize: 12 }}>Anomalies: {finalRecommendation.components?.risk?.anomalies || 0}</p>
+                    </Card>
+                  </Col>
+                  <Col span={6}>
+                    <Card size="small" title={<span style={{ color: themeStyles.textColor }}>Market Trend</span>} style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                      <Statistic value={finalRecommendation.components?.trend?.direction || 'N/A'} valueStyle={{ color: finalRecommendation.components?.trend?.direction?.includes('BULL') ? '#52c41a' : '#ff4d4f', fontSize: 14 }} />
+                      <p style={{ color: themeStyles.textColor, fontSize: 12 }}>Momentum: {finalRecommendation.components?.trend?.momentum}</p>
+                    </Card>
+                  </Col>
+                  {finalRecommendation.alerts && finalRecommendation.alerts.length > 0 && (
+                    <Col span={24}>
+                      <Card title={<span style={{ color: themeStyles.textColor }}>Active Alerts</span>} size="small" style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                        {finalRecommendation.alerts.map((alert, idx) => (
+                          <Alert key={idx} message={alert.title} description={alert.recommendation} type={alert.severity === 'HIGH' ? 'error' : 'warning'} showIcon style={{ marginBottom: 8 }} />
+                        ))}
+                      </Card>
+                    </Col>
+                  )}
+                </>
+              )}
+            </Row>
+          </TabPane>
+
+          {/* NEW: News Tab */}
+          <TabPane tab={<span><FileTextOutlined />News</span>} key="news">
+            <Row gutter={[24, 24]}>
+              <Col span={24}>
+                <Card 
+                  title={<span style={{ color: themeStyles.textColor, fontSize: 18, fontWeight: 'bold' }}>{ticker} News Analysis</span>}
+                  style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}
+                  headStyle={{ background: themeStyles.cardBackground, color: themeStyles.textColor, borderColor: themeStyles.borderColor }}
+                  bodyStyle={{ background: themeStyles.cardBackground }}
+                >
+                  {newsData ? (
+                    <div>
+                      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col span={6}>
+                          <Card size="small" style={{ background: themeStyles.cardBackground, borderColor: themeStyles.borderColor }}>
+                            <Statistic title="Total Headlines" value={newsData.total_headlines || 0} valueStyle={{ color: themeStyles.textColor }} />
+                          </Card>
+                        </Col>
+                        <Col span={6}>
+                          <Card size="small" style={{ background: '#52c41a22', border: '1px solid #52c41a' }}>
+                            <Statistic title="Positive" value={newsData.sentiment_summary?.positive_count || 0} valueStyle={{ color: '#52c41a' }} />
+                          </Card>
+                        </Col>
+                        <Col span={6}>
+                          <Card size="small" style={{ background: '#ff4d4f22', border: '1px solid #ff4d4f' }}>
+                            <Statistic title="Negative" value={newsData.sentiment_summary?.negative_count || 0} valueStyle={{ color: '#ff4d4f' }} />
+                          </Card>
+                        </Col>
+                        <Col span={6}>
+                          <Card size="small" style={{ background: '#faad1422', border: '1px solid #faad14' }}>
+                            <Statistic title="Neutral" value={newsData.sentiment_summary?.neutral_count || 0} valueStyle={{ color: '#faad14' }} />
+                          </Card>
+                        </Col>
+                      </Row>
+                      <Alert 
+                        message={`Sentiment: ${newsData.recommendation_impact}`}
+                        description={newsData.overall_interpretation}
+                        type={newsData.recommendation_impact === 'BUY' ? 'success' : newsData.recommendation_impact === 'SELL' ? 'error' : 'info'}
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                      />
+                      <List
+                        itemLayout="horizontal"
+                        dataSource={newsData.news_items?.slice(0, 10) || []}
+                        renderItem={item => (
+                          <List.Item style={{ borderColor: themeStyles.borderColor }}>
+                            <List.Item.Meta
+                              avatar={
+                                <Tag color={item.sentiment_label === 'POSITIVE' ? 'green' : item.sentiment_label === 'NEGATIVE' ? 'red' : 'orange'}>
+                                  {item.sentiment_score?.toFixed(2)}
+                                </Tag>
+                              }
+                              title={<span style={{ color: themeStyles.textColor }}>{item.headline}</span>}
+                              description={
+                                <div>
+                                  <p style={{ color: themeStyles.textColor, opacity: 0.7, margin: 0 }}>{item.summary}</p>
+                                  <Space style={{ marginTop: 4 }}>
+                                    <Tag>{item.category}</Tag>
+                                    <Tag>{item.source}</Tag>
+                                    <span style={{ color: themeStyles.textColor, opacity: 0.5, fontSize: 12 }}>{moment(item.date).format('MMM DD, HH:mm')}</span>
+                                  </Space>
+                                </div>
+                              }
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    </div>
+                  ) : (
+                    <Spin size="large" />
                   )}
                 </Card>
               </Col>

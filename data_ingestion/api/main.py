@@ -28,6 +28,17 @@ logger = logging.getLogger(__name__)
 from modeling.prophet_model import load_features, train_prophet
 from modeling.xgboost_model import train_xgboost_model, predict_xgboost
 from modeling.signals import generate_trading_signals, detect_anomalies, calculate_portfolio_metrics
+from modeling.advanced_analytics import (
+    generate_news_summary,
+    run_backtest,
+    generate_alerts,
+    compare_stocks,
+    generate_market_insights,
+    execute_paper_trade,
+    get_paper_account_summary,
+    simulate_trade_recommendation,
+    generate_enhanced_signals
+)
 from evaluation.metrics import ModelEvaluator, evaluate_prophet_model
 from data_ingestion.news_sentiment import NewsSentimentAnalyzer
 from data_ingestion.stock_fetch import fetch_stock_data
@@ -76,6 +87,19 @@ class SentimentRequest(BaseModel):
 class PortfolioRequest(BaseModel):
     tickers: List[str]
     weights: List[float]
+
+class CompareRequest(BaseModel):
+    tickers: List[str]
+
+class PaperTradeRequest(BaseModel):
+    ticker: str
+    action: str  # "BUY" or "SELL"
+    shares: int
+    price: float
+
+class BacktestRequest(BaseModel):
+    ticker: str = "AAPL"
+    initial_capital: float = 10000
 
 class ForecastResponse(BaseModel):
     ticker: str
@@ -588,6 +612,313 @@ async def update_monitored_tickers(tickers: List[str]):
         "new_tickers": monitored_tickers,
         "status": "success"
     }
+
+# ==================== NEW ADVANCED ENDPOINTS ====================
+
+@app.post("/news")
+async def get_news_summary(request: SentimentRequest):
+    """Get detailed news summary with sentiment analysis"""
+    try:
+        news_data = generate_news_summary(request.ticker, request.days_back)
+        return {
+            **news_data,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"News analysis failed: {str(e)}")
+
+@app.post("/backtest")
+async def run_backtest_simulation(request: BacktestRequest):
+    """Run backtesting simulation on historical data"""
+    try:
+        from data_ingestion.stock_fetch import fetch_stock_data
+        from feature_engineering.feature import simulate_sentiment_data, add_rolling_features
+        
+        stock_df = fetch_stock_data(ticker=request.ticker)
+        stock_df = simulate_sentiment_data(stock_df, ticker=request.ticker)
+        stock_df = add_rolling_features(stock_df)
+        df = stock_df.rename(columns={'Datetime': 'ds', 'Close': 'y'})
+        df['y'] = pd.to_numeric(df['y'], errors='coerce')
+        df['ds'] = pd.to_datetime(df['ds']).dt.tz_localize(None)
+        df = df.dropna()
+        
+        forecast = train_prophet(df)
+        backtest_results = run_backtest(df, forecast, request.initial_capital)
+        
+        return {
+            "ticker": request.ticker,
+            **backtest_results,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Backtest failed: {str(e)}")
+
+@app.post("/alerts")
+async def get_trading_alerts(request: ForecastRequest):
+    """Get trading alerts based on various conditions"""
+    try:
+        from data_ingestion.stock_fetch import fetch_stock_data
+        from feature_engineering.feature import simulate_sentiment_data, add_rolling_features
+        
+        stock_df = fetch_stock_data(ticker=request.ticker)
+        stock_df = simulate_sentiment_data(stock_df, ticker=request.ticker)
+        stock_df = add_rolling_features(stock_df)
+        df = stock_df.rename(columns={'Datetime': 'ds', 'Close': 'y'})
+        df['y'] = pd.to_numeric(df['y'], errors='coerce')
+        df['ds'] = pd.to_datetime(df['ds']).dt.tz_localize(None)
+        df = df.dropna()
+        
+        forecast = train_prophet(df)
+        alerts = generate_alerts(df, forecast, request.ticker)
+        
+        return {
+            **alerts,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Alert generation failed: {str(e)}")
+
+@app.post("/compare")
+async def compare_multiple_stocks(request: CompareRequest):
+    """Compare multiple stocks across various metrics"""
+    try:
+        from data_ingestion.stock_fetch import fetch_stock_data
+        from feature_engineering.feature import simulate_sentiment_data, add_rolling_features
+        
+        price_data = {}
+        for ticker in request.tickers:
+            try:
+                stock_df = fetch_stock_data(ticker=ticker)
+                stock_df = simulate_sentiment_data(stock_df, ticker=ticker)
+                stock_df = add_rolling_features(stock_df)
+                df = stock_df.rename(columns={'Datetime': 'ds', 'Close': 'y'})
+                df['y'] = pd.to_numeric(df['y'], errors='coerce')
+                df = df.dropna()
+                price_data[ticker] = df
+            except Exception as e:
+                logger.warning(f"Failed to fetch data for {ticker}: {e}")
+        
+        comparison_results = compare_stocks(request.tickers, price_data)
+        
+        return {
+            **comparison_results,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Stock comparison failed: {str(e)}")
+
+@app.post("/market-insights")
+async def get_market_insights(request: ForecastRequest):
+    """Get market insights and analysis for a ticker"""
+    try:
+        from data_ingestion.stock_fetch import fetch_stock_data
+        from feature_engineering.feature import simulate_sentiment_data, add_rolling_features
+        
+        stock_df = fetch_stock_data(ticker=request.ticker)
+        stock_df = simulate_sentiment_data(stock_df, ticker=request.ticker)
+        stock_df = add_rolling_features(stock_df)
+        df = stock_df.rename(columns={'Datetime': 'ds', 'Close': 'y'})
+        df['y'] = pd.to_numeric(df['y'], errors='coerce')
+        df = df.dropna()
+        
+        insights = generate_market_insights(request.ticker, df)
+        
+        return {
+            **insights,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Market insights failed: {str(e)}")
+
+@app.post("/paper-trade")
+async def execute_paper_trade_endpoint(request: PaperTradeRequest):
+    """Execute a paper trade"""
+    try:
+        result = execute_paper_trade(
+            ticker=request.ticker,
+            action=request.action,
+            shares=request.shares,
+            price=request.price
+        )
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return {
+            **result,
+            "status": "success"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Paper trade failed: {str(e)}")
+
+@app.get("/paper-trade/account")
+async def get_paper_trade_account():
+    """Get paper trading account summary"""
+    try:
+        account = get_paper_account_summary()
+        return {
+            **account,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get account: {str(e)}")
+
+@app.post("/paper-trade/recommendation")
+async def get_trade_recommendation(request: ForecastRequest):
+    """Get paper trade recommendation based on forecast"""
+    try:
+        from data_ingestion.stock_fetch import fetch_stock_data
+        from feature_engineering.feature import simulate_sentiment_data, add_rolling_features
+        
+        stock_df = fetch_stock_data(ticker=request.ticker)
+        stock_df = simulate_sentiment_data(stock_df, ticker=request.ticker)
+        stock_df = add_rolling_features(stock_df)
+        df = stock_df.rename(columns={'Datetime': 'ds', 'Close': 'y'})
+        df['y'] = pd.to_numeric(df['y'], errors='coerce')
+        df['ds'] = pd.to_datetime(df['ds']).dt.tz_localize(None)
+        df = df.dropna()
+        
+        current_price = float(df['y'].iloc[-1])
+        forecast = train_prophet(df)
+        
+        recommendation = simulate_trade_recommendation(
+            ticker=request.ticker,
+            current_price=current_price,
+            forecast=forecast
+        )
+        
+        return {
+            **recommendation,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Recommendation failed: {str(e)}")
+
+@app.post("/signals-enhanced")
+async def get_enhanced_signals(request: ForecastRequest):
+    """Get enhanced trading signals with detailed explanations"""
+    try:
+        from data_ingestion.stock_fetch import fetch_stock_data
+        from feature_engineering.feature import simulate_sentiment_data, add_rolling_features
+        
+        stock_df = fetch_stock_data(ticker=request.ticker)
+        stock_df = simulate_sentiment_data(stock_df, ticker=request.ticker)
+        stock_df = add_rolling_features(stock_df)
+        df = stock_df.rename(columns={'Datetime': 'ds', 'Close': 'y'})
+        df['y'] = pd.to_numeric(df['y'], errors='coerce')
+        df['ds'] = pd.to_datetime(df['ds']).dt.tz_localize(None)
+        df = df.dropna()
+        
+        forecast = train_prophet(df)
+        signals = generate_enhanced_signals(df, forecast)
+        
+        return {
+            "ticker": request.ticker,
+            **signals,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Enhanced signals failed: {str(e)}")
+
+@app.post("/final-recommendation")
+async def get_final_recommendation(request: ForecastRequest):
+    """Get comprehensive final recommendation combining all factors"""
+    try:
+        from data_ingestion.stock_fetch import fetch_stock_data
+        from feature_engineering.feature import simulate_sentiment_data, add_rolling_features
+        
+        stock_df = fetch_stock_data(ticker=request.ticker)
+        stock_df = simulate_sentiment_data(stock_df, ticker=request.ticker)
+        stock_df = add_rolling_features(stock_df)
+        df = stock_df.rename(columns={'Datetime': 'ds', 'Close': 'y'})
+        df['y'] = pd.to_numeric(df['y'], errors='coerce')
+        df['ds'] = pd.to_datetime(df['ds']).dt.tz_localize(None)
+        df = df.dropna()
+        
+        current_price = float(df['y'].iloc[-1])
+        forecast = train_prophet(df)
+        
+        # Get all analysis components
+        news = generate_news_summary(request.ticker, 7)
+        signals = generate_enhanced_signals(df, forecast)
+        alerts = generate_alerts(df, forecast, request.ticker)
+        insights = generate_market_insights(request.ticker, df)
+        anomalies = detect_anomalies(df, forecast)
+        
+        # Calculate composite score
+        sentiment_score = news['average_sentiment']  # -1 to 1
+        signal_score = (signals['summary']['buy_signals'] - signals['summary']['sell_signals']) / max(signals['summary']['total_signals'], 1)
+        risk_score = 1 if anomalies['risk_level'] == 'LOW' else 0.5 if anomalies['risk_level'] == 'MEDIUM' else 0
+        trend_score = 1 if insights['trend_analysis']['trend'] in ['BULLISH', 'MODERATELY BULLISH'] else -1 if insights['trend_analysis']['trend'] in ['BEARISH', 'MODERATELY BEARISH'] else 0
+        
+        # Weighted composite
+        composite_score = (sentiment_score * 0.2 + signal_score * 0.35 + risk_score * 0.2 + trend_score * 0.25)
+        
+        # Determine final recommendation
+        if composite_score > 0.5:
+            final_recommendation = "STRONG_BUY"
+            confidence = "HIGH"
+        elif composite_score > 0.2:
+            final_recommendation = "BUY"
+            confidence = "MEDIUM"
+        elif composite_score < -0.5:
+            final_recommendation = "STRONG_SELL"
+            confidence = "HIGH"
+        elif composite_score < -0.2:
+            final_recommendation = "SELL"
+            confidence = "MEDIUM"
+        else:
+            final_recommendation = "HOLD"
+            confidence = "MEDIUM"
+        
+        # Build reasoning
+        reasoning = []
+        reasoning.append(f"News Sentiment: {news['recommendation_impact']} (score: {sentiment_score:.2f})")
+        reasoning.append(f"Trading Signals: {signals['summary']['recommendation']} ({signals['summary']['buy_signals']} buy, {signals['summary']['sell_signals']} sell)")
+        reasoning.append(f"Risk Level: {anomalies['risk_level']} ({anomalies['anomaly_count']} anomalies detected)")
+        reasoning.append(f"Market Trend: {insights['trend_analysis']['trend']}")
+        reasoning.append(f"Momentum: {insights['momentum_analysis']['momentum']}")
+        
+        return {
+            "ticker": request.ticker,
+            "current_price": current_price,
+            "final_recommendation": final_recommendation,
+            "confidence": confidence,
+            "composite_score": round(composite_score, 3),
+            "reasoning": reasoning,
+            "components": {
+                "news_sentiment": {
+                    "score": round(sentiment_score, 3),
+                    "impact": news['recommendation_impact'],
+                    "interpretation": news['overall_interpretation']
+                },
+                "signals": {
+                    "recommendation": signals['summary']['recommendation'],
+                    "buy_signals": signals['summary']['buy_signals'],
+                    "sell_signals": signals['summary']['sell_signals'],
+                    "strength": signals['summary']['average_strength']
+                },
+                "risk": {
+                    "level": anomalies['risk_level'],
+                    "anomalies": anomalies['anomaly_count']
+                },
+                "trend": {
+                    "direction": insights['trend_analysis']['trend'],
+                    "momentum": insights['momentum_analysis']['momentum']
+                },
+                "forecast": {
+                    "predicted_price": float(forecast['yhat'].iloc[-1]),
+                    "predicted_change": round(((float(forecast['yhat'].iloc[-1]) - current_price) / current_price * 100), 2)
+                }
+            },
+            "alerts": alerts['alerts'][:3],  # Top 3 alerts
+            "generated_at": datetime.now().isoformat(),
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Final recommendation failed: {str(e)}")
 
 # Background task for periodic updates
 async def periodic_update():
